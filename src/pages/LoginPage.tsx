@@ -13,6 +13,7 @@ const LoginPage = () => {
   useEffect(() => {
     // Redirect to Buti page if user is already logged in
     if (user && !isLoading) {
+      console.log("User detected, navigating to /buti");
       navigate('/buti');
     }
   }, [user, isLoading, navigate]);
@@ -46,6 +47,7 @@ const LoginPage = () => {
     
     document.body.appendChild(loadingContainer);
 
+    // Force an immediate check for mock login in AuthContext
     setTimeout(() => {
       document.body.removeChild(loadingContainer);
       navigate('/buti');
