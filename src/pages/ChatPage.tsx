@@ -7,6 +7,7 @@ import Sidebar from '@/components/Sidebar';
 import ChatFeed from '@/components/ChatFeed';
 import SongSuggestionModal from '@/components/SongSuggestionModal';
 import ProfileModal from '@/components/ProfileModal';
+import ButiAvatar from '@/components/ButiAvatar';
 
 // Mock data for demo
 const MOCK_MESSAGES = [
@@ -26,7 +27,7 @@ const MOCK_MESSAGES = [
   },
   {
     id: '3',
-    sender: { name: 'Tal', avatar: '🦄' },
+    sender: { name: 'BUTI Staff', avatar: 'BUTI', isAdmin: true },
     text: 'The coffee is extra good today! Try the new blend.',
     timestamp: new Date(Date.now() - 1800000),
     isCurrentUser: false
@@ -47,7 +48,8 @@ const ChatPage = () => {
   const [isProfileModalOpen, setProfileModalOpen] = useState(false);
   const [profile, setProfile] = useState({
     name: 'Guest User',
-    avatar: '😎'
+    avatar: '😎',
+    isAdmin: false
   });
   
   useEffect(() => {
@@ -83,15 +85,22 @@ const ChatPage = () => {
         const randomUser = Math.floor(Math.random() * users.length);
         const randomMessage = Math.floor(Math.random() * messages.length);
         
+        // Small chance of BUTI staff message
+        const isButiStaffMessage = Math.random() < 0.1;
+        
         setMessages(prevMessages => [
           ...prevMessages,
           {
             id: uuidv4(),
-            sender: { 
-              name: users[randomUser], 
-              avatar: avatars[randomUser]
-            },
-            text: messages[randomMessage],
+            sender: isButiStaffMessage 
+              ? { name: 'BUTI Staff', avatar: 'BUTI', isAdmin: true }
+              : { 
+                  name: users[randomUser], 
+                  avatar: avatars[randomUser]
+                },
+            text: isButiStaffMessage 
+              ? "Don't forget today's special: Buy 1 coffee, get a cookie free! ☕🍪" 
+              : messages[randomMessage],
             timestamp: new Date(),
             isCurrentUser: false
           }
@@ -139,12 +148,14 @@ const ChatPage = () => {
         onOpenSongModal={() => setSongModalOpen(true)}
         onOpenProfileModal={() => setProfileModalOpen(true)}
         activeUsersCount={5} // Mock data - in real app, this would be from the backend
+        profile={profile}
       />
       
       <div className="flex-1 flex flex-col">
         <ChatFeed 
           messages={messages}
           onSendMessage={handleSendMessage}
+          CustomAvatar={ButiAvatar}
         />
       </div>
       

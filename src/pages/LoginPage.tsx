@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Logo from '@/components/Logo';
@@ -7,6 +7,7 @@ import LoginForm from '@/components/LoginForm';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const [isStaffLogin, setIsStaffLogin] = useState(false);
 
   const handleLoginWithGoogle = () => {
     // In a real app, this would authenticate with Google
@@ -28,7 +29,9 @@ const LoginPage = () => {
   };
 
   const handleLoginWithEmail = (email: string) => {
-    // In a real app, this would send a magic link email
+    // Check if it's a staff login (in a real app, this would validate against a database)
+    const isStaff = email.endsWith('@buti.cafe') || email === 'admin@buti.cafe';
+    
     console.log('Logging in with email:', email);
     
     // For demo purposes, let's just auto-login after a delay
@@ -40,10 +43,20 @@ const LoginPage = () => {
     setTimeout(() => {
       // Store user is logged in state
       localStorage.setItem('butiIsLoggedIn', 'true');
-      localStorage.setItem('butiUser', JSON.stringify({
-        name: email.split('@')[0],
-        avatar: '😊',
-      }));
+      
+      if (isStaff) {
+        localStorage.setItem('butiUser', JSON.stringify({
+          name: 'BUTI Staff',
+          avatar: 'BUTI',
+          isAdmin: true
+        }));
+        toast.success('Logged in as BUTI Staff');
+      } else {
+        localStorage.setItem('butiUser', JSON.stringify({
+          name: email.split('@')[0],
+          avatar: '😊',
+        }));
+      }
       
       // Navigate to main app
       navigate('/buti');
@@ -61,6 +74,8 @@ const LoginPage = () => {
           <LoginForm 
             onLoginWithGoogle={handleLoginWithGoogle}
             onLoginWithEmail={handleLoginWithEmail}
+            isStaffLogin={isStaffLogin}
+            onToggleStaffLogin={() => setIsStaffLogin(!isStaffLogin)}
           />
         </div>
       </main>

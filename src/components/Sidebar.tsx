@@ -1,20 +1,27 @@
 
 import React from 'react';
-import { MessageSquare, Music, User, Users } from 'lucide-react';
+import { MessageSquare, Music, Users } from 'lucide-react';
 import Logo from './Logo';
 import PerkCard from './PerkCard';
 import { Button } from '@/components/ui/button';
+import ButiAvatar from './ButiAvatar';
 
 interface SidebarProps {
   onOpenSongModal: () => void;
   onOpenProfileModal: () => void;
   activeUsersCount?: number;
+  profile?: {
+    name: string;
+    avatar: string;
+    isAdmin?: boolean;
+  };
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
   onOpenSongModal, 
   onOpenProfileModal, 
-  activeUsersCount = 0 
+  activeUsersCount = 0,
+  profile = { name: 'Guest', avatar: '😊' }
 }) => {
   return (
     <div className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
@@ -55,10 +62,13 @@ const Sidebar: React.FC<SidebarProps> = ({
           onClick={onOpenProfileModal} 
           className="w-full flex items-center justify-start gap-2"
         >
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-            <User size={16} />
-          </div>
-          <span>Profile</span>
+          <ButiAvatar 
+            avatar={profile.avatar} 
+            name={profile.name} 
+            isAdmin={profile.isAdmin}
+            size="sm"
+          />
+          <span>{profile.isAdmin ? 'BUTI Staff' : profile.name}</span>
         </Button>
       </div>
     </div>
