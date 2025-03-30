@@ -1,25 +1,17 @@
 
 import { createContext, useState, useEffect, ReactNode } from 'react';
-import { Session } from '@supabase/supabase-js';
 import { User } from '@/types';
 import { toast } from 'sonner';
 import { 
-  signInWithEmail, 
-  signInWithGoogle, 
-  signOutUser, 
-  updateUserProfile,
-  checkForDemoLogin,
-  fetchUserProfile
+  signOutUser,
+  checkForDemoLogin
 } from '@/utils/authUtils';
 import { setupAuthListeners } from '@/utils/authInitializer';
 
 interface AuthContextType {
-  session: Session | null;
   user: User | null;
   isAdmin: boolean;
   isLoading: boolean;
-  signIn: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
 }
@@ -27,7 +19,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,32 +26,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     console.log("AuthContext initialized");
     
-    // Properly import auth initialization logic using ES modules instead of require
     return setupAuthListeners({
-      setSession,
       setUser,
       setIsAdmin,
-      setIsLoading,
-      fetchUserProfile
+      setIsLoading
     });
   }, []);
-
-  const signIn = async () => {
-    try {
-      await signInWithEmail();
-    } catch (error: any) {
-      toast.error(error.message || 'Authentication failed');
-    }
-  };
-
-  const handleSignInWithGoogle = async () => {
-    try {
-      await signInWithGoogle();
-    } catch (error: any) {
-      toast.error(error.message || 'Google authentication failed');
-      throw error;
-    }
-  };
 
   const signOut = async () => {
     try {
@@ -75,12 +46,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProfile = async (updates: Partial<User>) => {
     try {
-      if (!session?.user && !user?.id) throw new Error('No user logged in');
+      if (!user?.id) throw new Error('No user logged in');
       
-      await updateUserProfile(session, user, updates);
+      // For simple name-only login, just update the local state
+      setUser({ ...user, ...updates });
       
-      if (user) {
-        setUser({ ...user, ...updates });
+      // Update localStorage if needed
+      if (updates.name) {
+        localStorage.setItem('tempMockGuestName', updates.name);
+      }
+      if (updates.avatar) {
+        localStorage.setItem('tempMockAvatar', updates.avatar);
       }
       
       toast.success('Profile updated successfully');
@@ -90,12 +66,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const value = {
-    session,
     user,
     isAdmin,
     isLoading,
-    signIn,
-    signInWithGoogle: handleSignInWithGoogle,
     signOut,
     updateProfile
   };

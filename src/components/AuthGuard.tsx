@@ -1,3 +1,4 @@
+
 import { useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,6 +12,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const navigate = useNavigate();
   
   useEffect(() => {
+    // Only redirect if loading is complete and no user is found
     if (!isLoading && !user) {
       navigate('/login');
     }
@@ -26,6 +28,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
     );
   }
 
+  // Allow access if we have a user (even if it's just a name)
   return <>{user ? children : null}</>;
 };
 

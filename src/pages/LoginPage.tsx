@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Logo from '@/components/Logo';
 import LoginForm from '@/components/LoginForm';
@@ -8,48 +8,15 @@ import { useAuth } from '@/hooks/useAuth';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user, signInWithGoogle, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
-    // Check for authentication success from URL parameters (after OAuth redirect)
-    const params = new URLSearchParams(location.search);
-    const authStatus = params.get('auth');
-    
-    if (authStatus === 'success') {
-      console.log("Auth success detected in URL params");
-      toast.success("התחברת בהצלחה!", {
-        description: "מועבר/ת לדף הצ'אט..."
-      });
-    } else if (authStatus === 'error') {
-      console.error("Auth error detected in URL params");
-      const errorMessage = params.get('error_description') || 'Unknown error occurred';
-      toast.error(`Authentication error: ${errorMessage}`);
-    }
-    
-    // Log authentication state for debugging
-    console.log("Auth state on login page:", { user, isLoading });
-    
     // Redirect to Buti page if user is already logged in
     if (user && !isLoading) {
       console.log("User detected, navigating to /buti");
       navigate('/buti');
     }
-  }, [user, isLoading, navigate, location]);
-
-  const handleLoginWithGoogle = async () => {
-    console.log("Starting Google login flow");
-    try {
-      await signInWithGoogle();
-      // The page will be redirected to Google for authentication
-      // Don't navigate here - we'll let the auth state change or redirect handle navigation
-    } catch (error) {
-      console.error("Google login error:", error);
-      toast.error("שגיאה בהתחברות עם גוגל", {
-        description: "נסה/י שוב מאוחר יותר"
-      });
-    }
-  };
+  }, [user, isLoading, navigate]);
 
   const handleLoginAsGuest = (name: string, avatar: string) => {
     // Create a guest user
@@ -117,10 +84,7 @@ const LoginPage = () => {
       
       <main className="flex-grow flex items-center justify-center p-6">
         <div className="w-full max-w-md">
-          <LoginForm 
-            onLoginWithGoogle={handleLoginWithGoogle}
-            onLoginAsGuest={handleLoginAsGuest}
-          />
+          <LoginForm onLoginAsGuest={handleLoginAsGuest} />
         </div>
       </main>
       
