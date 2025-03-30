@@ -66,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (!checkDemoLogin()) {
             setUser(null);
             setIsAdmin(false);
+            setIsLoading(false);
           }
         }
       }
@@ -101,17 +102,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     window.addEventListener('storage', handleStorageChange);
     
     // Add direct event listener for localStorage updates in the same window
-    document.addEventListener('customStorageEvent', () => {
+    const handleCustomStorageEvent = () => {
       console.log("Custom storage event detected");
       checkDemoLogin();
-    });
+    };
+    
+    document.addEventListener('customStorageEvent', handleCustomStorageEvent);
 
     return () => {
       subscription.unsubscribe();
       window.removeEventListener('storage', handleStorageChange);
-      document.removeEventListener('customStorageEvent', () => {
-        console.log("Custom storage event listener removed");
-      });
+      document.removeEventListener('customStorageEvent', handleCustomStorageEvent);
     };
   }, []);
 
@@ -171,16 +172,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInWithGoogle = async () => {
     try {
       console.log("Attempting Google sign in");
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/buti`
+          redirectTo: `${window.location.origin}/login?auth=success`
         }
       });
       
       if (error) throw error;
+      console.log("Google auth initiated:", data);
     } catch (error: any) {
+      console.error("Google auth error:", error);
       toast.error(error.message || 'Google authentication failed');
+      throw error; // Re-throw for handling in the component
     }
   };
 
@@ -190,6 +194,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('tempMockEmail');
       localStorage.removeItem('tempMockIsStaff');
       localStorage.removeItem('tempMockGuestName');
+      localStorage.removeItem('tempMockAvatar');
       
       // If we have a real session, sign out from supabase
       if (session) {

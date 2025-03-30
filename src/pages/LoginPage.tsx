@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import Logo from '@/components/Logo';
 import LoginForm from '@/components/LoginForm';
@@ -8,19 +8,36 @@ import { useAuth } from '@/context/AuthContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, signInWithGoogle, isLoading } = useAuth();
 
   useEffect(() => {
+    // Check for authentication success from URL parameters (after OAuth redirect)
+    const params = new URLSearchParams(location.search);
+    if (params.get('auth') === 'success') {
+      toast.success("התחברת בהצלחה!", {
+        description: "מועבר/ת לדף הצ'אט..."
+      });
+    }
+    
     // Redirect to Buti page if user is already logged in
     if (user && !isLoading) {
       console.log("User detected, navigating to /buti");
       navigate('/buti');
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, location]);
 
-  const handleLoginWithGoogle = () => {
-    signInWithGoogle();
-    // Don't navigate here - we'll let the auth state change handle navigation
+  const handleLoginWithGoogle = async () => {
+    console.log("Starting Google login flow");
+    try {
+      await signInWithGoogle();
+      // Don't navigate here - we'll let the auth state change or redirect handle navigation
+    } catch (error) {
+      console.error("Google login error:", error);
+      toast.error("שגיאה בהתחברות עם גוגל", {
+        description: "נסה/י שוב מאוחר יותר"
+      });
+    }
   };
 
   const handleLoginAsGuest = (name: string, avatar: string) => {
@@ -40,7 +57,6 @@ const LoginPage = () => {
     console.log("Guest login data stored in localStorage");
     
     // Trigger a storage event for the AuthContext to pick up
-    // This helps when the AuthContext is in another tab or component
     try {
       const storageEvent = new StorageEvent('storage', {
         key: 'tempMockEmail',
@@ -48,6 +64,10 @@ const LoginPage = () => {
       });
       window.dispatchEvent(storageEvent);
       console.log("Dispatched storage event");
+      
+      // Also dispatch a custom event to ensure it's caught in the same window
+      document.dispatchEvent(new CustomEvent('customStorageEvent'));
+      console.log("Dispatched custom storage event");
     } catch (e) {
       console.error("Could not dispatch storage event:", e);
     }
