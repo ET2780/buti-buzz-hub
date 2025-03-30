@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Perk } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { PerksService } from '@/services/PerksService';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 interface PerksManagementProps {
   isOpen: boolean;

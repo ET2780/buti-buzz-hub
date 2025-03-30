@@ -8,7 +8,7 @@ import SongSuggestionModal from '@/components/SongSuggestionModal';
 import ProfileModal from '@/components/ProfileModal';
 import PerksManagement from '@/components/PerksManagement';
 import AuthGuard from '@/components/AuthGuard';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { PerksService } from '@/services/PerksService';
 import { toast } from '@/components/ui/use-toast';
 
