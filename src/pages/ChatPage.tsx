@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,6 +10,7 @@ import SongModal from '@/components/SongModal';
 import ProfileModal from '@/components/ProfileModal';
 import PerksManagement from '@/components/PerksManagement';
 import Chat from '@/components/Chat';
+import { PerksService } from '@/services/PerksService';
 
 const ChatPage = () => {
   const { user } = useAuth();
