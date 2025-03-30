@@ -115,11 +115,18 @@ const ChatPage = () => {
     }
   };
 
-  // Load perks on mount
+  // Load perks on mount and listen for changes
   useEffect(() => {
     loadActivePerks();
     
-    // Set up real-time subscription to perks table
+    // Listen for custom event for demo mode updates
+    const handleDemoPerksUpdated = () => {
+      console.log('Demo perks updated, reloading perks');
+      loadActivePerks();
+    };
+    window.addEventListener('demo-perks-updated', handleDemoPerksUpdated);
+    
+    // Set up real-time subscription to perks table for Supabase updates
     const channel = supabase
       .channel('public:perks')
       .on(
@@ -133,6 +140,7 @@ const ChatPage = () => {
       .subscribe();
     
     return () => {
+      window.removeEventListener('demo-perks-updated', handleDemoPerksUpdated);
       supabase.removeChannel(channel);
     };
   }, []);

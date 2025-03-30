@@ -2,6 +2,9 @@
 import { User } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
+// Demo perks storage key
+const DEMO_PERKS_STORAGE_KEY = 'buti_demo_perks';
+
 // Function to check for demo login from localStorage
 export const checkForDemoLogin = () => {
   console.log("Checking for demo login");
@@ -40,6 +43,9 @@ export const signOutUser = async () => {
   localStorage.removeItem('tempMockGuestName');
   localStorage.removeItem('tempMockAvatar');
   localStorage.removeItem('tempMockResetEmail');
+  
+  // Clear demo perks when admin logs out
+  localStorage.removeItem(DEMO_PERKS_STORAGE_KEY);
 };
 
 // Function to create an admin user
