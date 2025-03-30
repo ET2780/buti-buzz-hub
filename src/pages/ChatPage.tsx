@@ -12,6 +12,9 @@ import PerksManagement from '@/components/PerksManagement';
 import Chat from '@/components/Chat';
 import { PerksService } from '@/services/PerksService';
 
+// Define a fallback socket URL if the environment variable is not available
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+
 const ChatPage = () => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -44,7 +47,7 @@ const ChatPage = () => {
   useEffect(() => {
     if (!user) return;
 
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL as string, {
+    const newSocket = io(SOCKET_URL, {
       query: { userId: user.id },
       transports: ['websocket', 'polling'],
     });
