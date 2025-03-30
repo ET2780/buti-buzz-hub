@@ -61,8 +61,8 @@ const Chat: React.FC<ChatProps> = ({
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground py-10">
             {connectionError 
-              ? 'שרת הצ'אט אינו זמין כרגע.' 
-              : 'אין הודעות עדיין. התחילו שיחה!'}
+              ? "שרת הצ'אט אינו זמין כרגע." 
+              : "אין הודעות עדיין. התחילו שיחה!"}
           </div>
         ) : (
           <div className="space-y-4">
