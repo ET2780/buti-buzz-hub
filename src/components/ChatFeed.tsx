@@ -3,12 +3,14 @@ import React, { useRef, useEffect } from 'react';
 import { Send, Smile } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ButiAvatar from './ButiAvatar';
 
 interface Message {
   id: string;
   sender: {
     name: string;
     avatar: string;
+    isAdmin?: boolean;
   };
   text: string;
   timestamp: Date;
@@ -57,8 +59,13 @@ const ChatFeed: React.FC<ChatFeedProps> = ({ messages, onSendMessage }) => {
               className={`flex ${message.isCurrentUser ? 'justify-end' : 'justify-start'}`}
             >
               {!message.isCurrentUser && (
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground mr-2">
-                  {message.sender.avatar}
+                <div className="mr-2">
+                  <ButiAvatar 
+                    avatar={message.sender.avatar} 
+                    name={message.sender.name} 
+                    isAdmin={message.sender.isAdmin}
+                    size="sm"
+                  />
                 </div>
               )}
               <div>

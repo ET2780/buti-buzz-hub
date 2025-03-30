@@ -7,10 +7,22 @@ import Sidebar from '@/components/Sidebar';
 import ChatFeed from '@/components/ChatFeed';
 import SongSuggestionModal from '@/components/SongSuggestionModal';
 import ProfileModal from '@/components/ProfileModal';
-import ButiAvatar from '@/components/ButiAvatar';
+
+// Define the Message interface to ensure consistent typing
+interface Message {
+  id: string;
+  sender: {
+    name: string;
+    avatar: string;
+    isAdmin?: boolean;
+  };
+  text: string;
+  timestamp: Date;
+  isCurrentUser: boolean;
+}
 
 // Mock data for demo
-const MOCK_MESSAGES = [
+const MOCK_MESSAGES: Message[] = [
   {
     id: '1',
     sender: { name: 'Noa', avatar: '🌟' },
@@ -43,7 +55,7 @@ const MOCK_MESSAGES = [
 
 const ChatPage = () => {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState(MOCK_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
   const [isSongModalOpen, setSongModalOpen] = useState(false);
   const [isProfileModalOpen, setProfileModalOpen] = useState(false);
   const [profile, setProfile] = useState({
@@ -88,23 +100,22 @@ const ChatPage = () => {
         // Small chance of BUTI staff message
         const isButiStaffMessage = Math.random() < 0.1;
         
-        setMessages(prevMessages => [
-          ...prevMessages,
-          {
-            id: uuidv4(),
-            sender: isButiStaffMessage 
-              ? { name: 'BUTI Staff', avatar: 'BUTI', isAdmin: true }
-              : { 
-                  name: users[randomUser], 
-                  avatar: avatars[randomUser]
-                },
-            text: isButiStaffMessage 
-              ? "Don't forget today's special: Buy 1 coffee, get a cookie free! ☕🍪" 
-              : messages[randomMessage],
-            timestamp: new Date(),
-            isCurrentUser: false
-          }
-        ]);
+        const newMessage: Message = {
+          id: uuidv4(),
+          sender: isButiStaffMessage 
+            ? { name: 'BUTI Staff', avatar: 'BUTI', isAdmin: true }
+            : { 
+                name: users[randomUser], 
+                avatar: avatars[randomUser]
+              },
+          text: isButiStaffMessage 
+            ? "Don't forget today's special: Buy 1 coffee, get a cookie free! ☕🍪" 
+            : messages[randomMessage],
+          timestamp: new Date(),
+          isCurrentUser: false
+        };
+        
+        setMessages(prevMessages => [...prevMessages, newMessage]);
       }
     }, 20000);
     
@@ -112,7 +123,7 @@ const ChatPage = () => {
   }, [navigate]);
   
   const handleSendMessage = (text: string) => {
-    const newMessage = {
+    const newMessage: Message = {
       id: uuidv4(),
       sender: profile,
       text,
@@ -155,7 +166,6 @@ const ChatPage = () => {
         <ChatFeed 
           messages={messages}
           onSendMessage={handleSendMessage}
-          CustomAvatar={ButiAvatar}
         />
       </div>
       
