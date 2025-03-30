@@ -1,89 +1,94 @@
 
-import React, { useState } from 'react';
-import { User } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { createAdminUser } from '@/utils/authUtils';
 
-const EMOJIS = ['😊', '😎', '🤓', '🧠', '👾', '🤖', '👋', '🦄', '🌟', '🍕', '🍩', '☕', '🌈', '🚀'];
-
-interface LoginFormProps {
-  onLoginAsGuest: (name: string, avatar: string) => void;
-}
-
-const LoginForm: React.FC<LoginFormProps> = ({ onLoginAsGuest }) => {
-  const [guestName, setGuestName] = useState('');
-  const [selectedAvatar, setSelectedAvatar] = useState('😊');
+const LoginForm = () => {
+  const [name, setName] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleGuestLogin = () => {
-    if (!guestName.trim()) {
+  const handleGuestLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name.trim()) {
+      toast.error('נא להזין שם');
       return;
     }
     
-    setIsLoading(true);
-    onLoginAsGuest(guestName, selectedAvatar);
-    
-    // Reset loading state after a delay
-    setTimeout(() => {
+    try {
+      setIsLoading(true);
+      
+      // Choose a random emoji for avatar
+      const avatars = ['😊', '😎', '🙂', '😄', '👋', '👍', '👏', '🎉'];
+      const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+      
+      if (isAdmin) {
+        // Create an admin user
+        createAdminUser(name, randomAvatar);
+        toast.success('התחברת כמנהל/ת');
+      } else {
+        // Regular guest user
+        localStorage.setItem('tempMockGuestName', name);
+        localStorage.setItem('tempMockAvatar', randomAvatar);
+        localStorage.setItem('tempMockIsStaff', 'false');
+        
+        // Dispatch a custom event to notify the auth context
+        document.dispatchEvent(new Event('customStorageEvent'));
+        
+        toast.success('ברוך הבא!');
+      }
+      
+      navigate('/buti');
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('שגיאה בהתחברות, אנא נסה שוב');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold">התחברות לקפה BUTI</CardTitle>
-        <CardDescription>
-          הזן את שמך והצטרף לקהילה שלנו
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-4">
-          <div>
-            <Input
-              type="text"
-              placeholder="הכנס/י את שמך"
-              value={guestName}
-              onChange={(e) => setGuestName(e.target.value)}
-              className="mb-3"
-            />
-          </div>
-          
-          <div>
-            <label className="text-sm font-medium mb-2 block">בחר/י אווטר</label>
-            <div className="grid grid-cols-7 gap-2">
-              {EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => setSelectedAvatar(emoji)}
-                  className={`w-10 h-10 text-xl rounded-lg flex items-center justify-center ${
-                    selectedAvatar === emoji ? 'bg-primary text-white' : 'bg-secondary'
-                  }`}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          <Button 
-            className="w-full flex items-center gap-2 justify-center mt-4"
-            onClick={handleGuestLogin}
-            disabled={isLoading || !guestName.trim()}
-          >
-            <User size={16} />
-            {isLoading ? "מתחבר..." : "התחבר/י"}
-          </Button>
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-center">
-        <p className="text-xs text-muted-foreground">
-          בהמשך, את/ה מסכים/ה לתנאי השימוש ולמדיניות הפרטיות שלנו.
+    <div className="w-full max-w-md mx-auto p-6 space-y-6 bg-white rounded-lg shadow-md">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold">כניסה לBUTI</h2>
+        <p className="text-muted-foreground mt-2">
+          התחבר/י כדי להצטרף לצ'אט ולהתעדכן בהטבות
         </p>
-      </CardFooter>
-    </Card>
+      </div>
+
+      <form onSubmit={handleGuestLogin} className="space-y-4">
+        <div>
+          <Input
+            placeholder="השם שלך"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="text-right"
+          />
+        </div>
+        
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="adminCheck"
+            checked={isAdmin}
+            onChange={(e) => setIsAdmin(e.target.checked)}
+            className="mr-2"
+          />
+          <label htmlFor="adminCheck" className="text-sm text-muted-foreground">
+            התחבר/י כמנהל/ת
+          </label>
+        </div>
+
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? 'מתחבר...' : 'כניסה לצ\'אט'}
+        </Button>
+      </form>
+    </div>
   );
 };
 

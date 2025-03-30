@@ -9,11 +9,11 @@ export const checkForDemoLogin = () => {
   const mockGuestName = localStorage.getItem('tempMockGuestName');
   const mockAvatar = localStorage.getItem('tempMockAvatar');
   
-  if (mockEmail) {
-    console.log("Found demo login for:", mockEmail);
+  if (mockEmail || mockGuestName) {
+    console.log("Found demo login for:", mockEmail || mockGuestName);
     const mockUser: User = {
-      id: mockEmail,
-      name: mockGuestName || (mockEmail.includes('guest') ? `אורח/ת ${Math.floor(Math.random() * 1000)}` : mockEmail.split('@')[0]),
+      id: mockEmail || mockGuestName || `guest-${Date.now()}`,
+      name: mockGuestName || (mockEmail ? (mockEmail.includes('guest') ? `אורח/ת ${Math.floor(Math.random() * 1000)}` : mockEmail.split('@')[0]) : 'Guest'),
       avatar: mockAvatar || '😊',
       isAdmin: mockIsStaff
     };
@@ -30,4 +30,15 @@ export const signOutUser = async () => {
   localStorage.removeItem('tempMockIsStaff');
   localStorage.removeItem('tempMockGuestName');
   localStorage.removeItem('tempMockAvatar');
+};
+
+// Function to create an admin user
+export const createAdminUser = (name: string, avatar: string = '😎') => {
+  localStorage.setItem('tempMockEmail', `admin-${Date.now()}@buti.com`);
+  localStorage.setItem('tempMockIsStaff', 'true');
+  localStorage.setItem('tempMockGuestName', name);
+  localStorage.setItem('tempMockAvatar', avatar);
+  
+  // Dispatch a custom event to notify the auth context
+  document.dispatchEvent(new Event('customStorageEvent'));
 };
