@@ -4,18 +4,7 @@ import { Send, Smile } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ButiAvatar from './ButiAvatar';
-
-interface Message {
-  id: string;
-  sender: {
-    name: string;
-    avatar: string;
-    isAdmin?: boolean;
-  };
-  text: string;
-  timestamp: Date;
-  isCurrentUser: boolean;
-}
+import { Message } from '@/types';
 
 interface ChatFeedProps {
   messages: Message[];

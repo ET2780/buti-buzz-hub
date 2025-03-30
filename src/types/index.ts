@@ -19,8 +19,8 @@ export interface Perk {
   title: string;
   description: string;
   is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
+  created_at: string | Date; // Modified to accept both string and Date
+  updated_at: string | Date; // Modified to accept both string and Date
 }
 
 export type UserRole = 'admin' | 'customer';

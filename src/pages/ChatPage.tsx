@@ -10,6 +10,7 @@ import PerksManagement from '@/components/PerksManagement';
 import AuthGuard from '@/components/AuthGuard';
 import { useAuth } from '@/context/AuthContext';
 import { PerksService } from '@/services/PerksService';
+import { toast } from '@/components/ui/use-toast';
 
 const ChatPage = () => {
   const { user, isAdmin } = useAuth();
@@ -42,6 +43,13 @@ const ChatPage = () => {
     // This would re-fetch perks for the sidebar
   };
 
+  const handleSongSubmit = (songName: string) => {
+    toast({
+      title: "תודה על ההצעה!",
+      description: `השיר "${songName}" נשלח לצוות BUTI`,
+    });
+  };
+
   return (
     <AuthGuard>
       <div className="flex h-screen">
@@ -55,7 +63,6 @@ const ChatPage = () => {
         <div className="flex-1 flex flex-col">
           <ChatFeed 
             messages={messages}
-            currentUser={user}
             onSendMessage={(text) => {
               if (user) {
                 const newMessage: Message = {
@@ -74,6 +81,7 @@ const ChatPage = () => {
         <SongSuggestionModal 
           isOpen={showSongModal}
           onClose={() => setShowSongModal(false)}
+          onSubmit={handleSongSubmit}
         />
         
         <ProfileModal 
