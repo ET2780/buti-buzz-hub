@@ -45,15 +45,15 @@ const SongSuggestionModal: React.FC<SongSuggestionModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Music className="h-5 w-5 text-buti-blue" />
-            Suggest a Song for the BUTI Playlist 🎶
+            הצע/י שיר לפלייליסט של BUTI 🎶
           </DialogTitle>
           <DialogDescription>
-            What would you like to hear while enjoying your coffee? If it fits the vibe, it may play today.
+            מה תרצה/י לשמוע בזמן שאת/ה נהנה/ית מהקפה שלך? אם זה מתאים לאווירה, יתכן שינוגן היום.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <Input
-            placeholder="Song name or Spotify link"
+            placeholder="שם השיר או קישור לספוטיפיי"
             value={songName}
             onChange={(e) => setSongName(e.target.value)}
             className="w-full"
@@ -61,14 +61,14 @@ const SongSuggestionModal: React.FC<SongSuggestionModalProps> = ({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            ביטול
           </Button>
           <Button 
             onClick={handleSubmit} 
             disabled={!songName.trim() || submitting}
             className="bg-accent hover:bg-accent/90 text-accent-foreground"
           >
-            {submitting ? 'Submitting...' : 'Suggest Song'}
+            {submitting ? 'שולח...' : 'הצע/י שיר'}
           </Button>
         </DialogFooter>
       </DialogContent>

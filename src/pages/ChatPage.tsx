@@ -25,29 +25,29 @@ interface Message {
 const MOCK_MESSAGES: Message[] = [
   {
     id: '1',
-    sender: { name: 'Noa', avatar: '🌟' },
-    text: 'Hey everyone! Just got here. Great playlist today.',
+    sender: { name: 'נועה', avatar: '🌟' },
+    text: 'היי לכולם! הרגע הגעתי. הפלייליסט היום מעולה.',
     timestamp: new Date(Date.now() - 3600000 * 2),
     isCurrentUser: false
   },
   {
     id: '2',
-    sender: { name: 'Amit', avatar: '🚀' },
-    text: 'Welcome! I\'m working on my project by the window.',
+    sender: { name: 'עמית', avatar: '🚀' },
+    text: 'ברוכים הבאים! אני עובד על הפרויקט שלי ליד החלון.',
     timestamp: new Date(Date.now() - 3600000),
     isCurrentUser: false
   },
   {
     id: '3',
-    sender: { name: 'BUTI Staff', avatar: 'BUTI', isAdmin: true },
-    text: 'The coffee is extra good today! Try the new blend.',
+    sender: { name: 'צוות BUTI', avatar: 'BUTI', isAdmin: true },
+    text: 'הקפה היום מעולה במיוחד! נסו את התערובת החדשה.',
     timestamp: new Date(Date.now() - 1800000),
     isCurrentUser: false
   },
   {
     id: '4',
-    sender: { name: 'Dana', avatar: '🍩' },
-    text: 'Anyone want to share a table? It\'s getting crowded.',
+    sender: { name: 'דנה', avatar: '🍩' },
+    text: 'מישהו רוצה לחלוק שולחן? נהיה צפוף.',
     timestamp: new Date(Date.now() - 900000),
     isCurrentUser: false
   }
@@ -59,7 +59,7 @@ const ChatPage = () => {
   const [isSongModalOpen, setSongModalOpen] = useState(false);
   const [isProfileModalOpen, setProfileModalOpen] = useState(false);
   const [profile, setProfile] = useState({
-    name: 'Guest User',
+    name: 'אורח',
     avatar: '😎',
     isAdmin: false
   });
@@ -82,16 +82,16 @@ const ChatPage = () => {
     const interval = setInterval(() => {
       // 20% chance of new message every 20 seconds
       if (Math.random() < 0.2) {
-        const users = ['Noa', 'Amit', 'Tal', 'Dana', 'Yoni', 'Maya'];
+        const users = ['נועה', 'עמית', 'טל', 'דנה', 'יוני', 'מאיה'];
         const avatars = ['🌟', '🚀', '🦄', '🍩', '☕', '🌈'];
         const messages = [
-          'Anyone tried the new pastries?',
-          'This song is so good!',
-          'Who else is here until closing?',
-          'The WiFi seems faster today!',
-          'Just finished a big project. Time to celebrate!',
-          'Does anyone know the name of this song playing?',
-          'Perfect coffee weather today!'
+          'מישהו ניסה את המאפים החדשים?',
+          'השיר הזה כל כך טוב!',
+          'מי עוד כאן עד הסגירה?',
+          'הוואיפיי נראה מהיר יותר היום!',
+          'סיימתי עכשיו פרויקט גדול. זמן לחגוג!',
+          'מישהו יודע את השם של השיר שמתנגן?',
+          'מזג אוויר מושלם לקפה היום!'
         ];
         
         const randomUser = Math.floor(Math.random() * users.length);
@@ -103,13 +103,13 @@ const ChatPage = () => {
         const newMessage: Message = {
           id: uuidv4(),
           sender: isButiStaffMessage 
-            ? { name: 'BUTI Staff', avatar: 'BUTI', isAdmin: true }
+            ? { name: 'צוות BUTI', avatar: 'BUTI', isAdmin: true }
             : { 
                 name: users[randomUser], 
                 avatar: avatars[randomUser]
               },
           text: isButiStaffMessage 
-            ? "Don't forget today's special: Buy 1 coffee, get a cookie free! ☕🍪" 
+            ? "אל תשכחו את המבצע של היום: קנו קפה אחד, קבלו עוגיה חינם! ☕🍪" 
             : messages[randomMessage],
           timestamp: new Date(),
           isCurrentUser: false
@@ -135,22 +135,22 @@ const ChatPage = () => {
   };
   
   const handleSuggestSong = (song: string) => {
-    toast.success('Song suggestion received!', {
-      description: `Thanks for suggesting "${song}". If it fits the vibe, it may play today.`
+    toast.success('קיבלנו את הצעת השיר!', {
+      description: `תודה שהצעת "${song}". אם זה מתאים לאווירה, יתכן שינוגן היום.`
     });
   };
   
   const handleUpdateProfile = (newProfile: typeof profile) => {
     setProfile(newProfile);
     localStorage.setItem('butiUser', JSON.stringify(newProfile));
-    toast.success('Profile updated!');
+    toast.success('הפרופיל עודכן!');
   };
   
   const handleLogout = () => {
     localStorage.removeItem('butiIsLoggedIn');
     localStorage.removeItem('butiUser');
     navigate('/');
-    toast.success('Logged out successfully');
+    toast.success('התנתקת בהצלחה');
   };
 
   return (

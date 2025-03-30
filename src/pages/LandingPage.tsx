@@ -16,11 +16,11 @@ const LandingPage = () => {
       
       <main className="flex-grow flex flex-col items-center justify-center p-6 max-w-3xl mx-auto text-center">
         <h1 className="text-4xl md:text-5xl font-bold mb-4">
-          Welcome to BUTI's Community Hub ☕
+          ברוכים הבאים לקהילת BUTI ☕
         </h1>
         
         <p className="text-xl mb-8 text-muted-foreground">
-          Join the live chat, suggest a song, and grab today's café deal — no app needed.
+          הצטרפו לצ'אט החי, הציעו שיר, וקבלו את מבצע היום של הקפה — ללא צורך באפליקציה.
         </p>
         
         <Button 
@@ -28,19 +28,19 @@ const LandingPage = () => {
           size="lg" 
           className="text-lg px-8 py-6 mb-12"
         >
-          Enter BUTI Chat
+          כניסה לצ'אט BUTI
         </Button>
         
         <div className="w-full max-w-sm mx-auto opacity-85">
           <PerkCard 
-            title="Today's Perk" 
-            description="Buy 1 coffee, get a cookie free! ☕🍪" 
+            title="הטבת היום" 
+            description="קנו קפה אחד, קבלו עוגיה חינם! ☕🍪" 
           />
         </div>
       </main>
       
       <footer className="p-4 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} BUTI Café • Dizengoff St, Tel Aviv
+        © {new Date().getFullYear()} קפה BUTI • רחוב דיזנגוף, תל אביב
       </footer>
     </div>
   );

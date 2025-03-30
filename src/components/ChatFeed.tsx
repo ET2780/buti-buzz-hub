@@ -47,8 +47,8 @@ const ChatFeed: React.FC<ChatFeedProps> = ({ messages, onSendMessage }) => {
   return (
     <div className="flex flex-col h-screen">
       <div className="p-4 border-b border-border">
-        <h1 className="text-xl font-semibold">BUTI Café Chat</h1>
-        <p className="text-sm text-muted-foreground">Chat with others at the café right now</p>
+        <h1 className="text-xl font-semibold">צ'אט קפה BUTI</h1>
+        <p className="text-sm text-muted-foreground">שוחח/י עם אחרים בקפה כרגע</p>
       </div>
       
       <div className="flex-grow overflow-y-auto p-4">
@@ -99,7 +99,7 @@ const ChatFeed: React.FC<ChatFeedProps> = ({ messages, onSendMessage }) => {
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             onKeyDown={handleKeyPress}
-            placeholder="Type a message..."
+            placeholder="הקלד/י הודעה..."
             className="flex-grow border-muted"
           />
           <Button onClick={handleSendMessage} size="icon" disabled={!messageText.trim()}>

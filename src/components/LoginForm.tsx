@@ -27,8 +27,8 @@ const LoginForm: React.FC<LoginFormProps> = ({
   const handleEmailLogin = () => {
     if (!email.includes('@')) {
       toast({
-        title: "Invalid email",
-        description: "Please enter a valid email address",
+        title: "אימייל לא תקין",
+        description: "אנא הכנס/י כתובת אימייל תקינה",
         variant: "destructive",
       });
       return;
@@ -40,8 +40,8 @@ const LoginForm: React.FC<LoginFormProps> = ({
     setTimeout(() => {
       onLoginWithEmail(email);
       toast({
-        title: "Magic link sent!",
-        description: "Check your email for a login link",
+        title: "קישור קסם נשלח!",
+        description: "בדוק/י את האימייל שלך לקישור התחברות",
       });
       setIsLoading(false);
     }, 1500);
@@ -50,9 +50,9 @@ const LoginForm: React.FC<LoginFormProps> = ({
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Sign in to BUTI Café</CardTitle>
+        <CardTitle className="text-xl font-semibold">התחברות לקפה BUTI</CardTitle>
         <CardDescription>
-          Join the community. No account needed - just verify it's you.
+          הצטרף/י לקהילה. אין צורך בחשבון - רק אימות זהות.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -70,7 +70,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
                 <path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.099 -17.884 43.989 -14.754 43.989 Z"/>
               </g>
             </svg>
-            Continue with Google
+            המשך עם גוגל
           </Button>
         )}
 
@@ -80,7 +80,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-card px-2 text-muted-foreground">
-              {isStaffLogin ? 'Staff Login' : 'Or continue with email'}
+              {isStaffLogin ? 'התחברות צוות' : 'או המשך עם אימייל'}
             </span>
           </div>
         </div>
@@ -98,13 +98,13 @@ const LoginForm: React.FC<LoginFormProps> = ({
             disabled={isLoading}
           >
             {isStaffLogin ? <Coffee size={16} /> : <Mail size={16} />}
-            {isLoading ? "Sending link..." : "Send magic link"}
+            {isLoading ? "שולח קישור..." : "שלח קישור קסם"}
           </Button>
         </div>
 
         {onToggleStaffLogin && (
           <div className="flex items-center justify-between pt-4">
-            <span className="text-sm text-muted-foreground">BUTI Staff Login</span>
+            <span className="text-sm text-muted-foreground">התחברות צוות BUTI</span>
             <Switch 
               checked={isStaffLogin}
               onCheckedChange={onToggleStaffLogin}
@@ -114,7 +114,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
       </CardContent>
       <CardFooter className="flex justify-center">
         <p className="text-xs text-muted-foreground">
-          By continuing, you agree to our Terms of Service and Privacy Policy.
+          בהמשך, את/ה מסכים/ה לתנאי השימוש ולמדיניות הפרטיות שלנו.
         </p>
       </CardFooter>
     </Card>

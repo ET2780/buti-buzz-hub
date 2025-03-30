@@ -17,14 +17,26 @@ const LoginPage = () => {
       // Store user is logged in state (in a real app, store token/session)
       localStorage.setItem('butiIsLoggedIn', 'true');
       localStorage.setItem('butiUser', JSON.stringify({
-        name: 'Guest User',
+        name: 'אורח',
         avatar: '😎',
       }));
       
-      // Navigate to main app
-      navigate('/buti');
+      // Show BUTI logo after login before navigating
+      const loadingContainer = document.createElement('div');
+      loadingContainer.className = 'fixed inset-0 bg-white flex items-center justify-center z-50';
       
-      toast.success('Successfully logged in');
+      const logoElement = document.createElement('div');
+      logoElement.className = 'animate-pulse';
+      loadingContainer.appendChild(logoElement);
+      
+      document.body.appendChild(loadingContainer);
+
+      setTimeout(() => {
+        document.body.removeChild(loadingContainer);
+        navigate('/buti');
+      }, 1500);
+      
+      toast.success('התחברת בהצלחה');
     }, 1500);
   };
 
@@ -36,8 +48,8 @@ const LoginPage = () => {
     
     // For demo purposes, let's just auto-login after a delay
     // In a real app, the user would click the magic link in their email
-    toast.success(`Magic link sent to ${email}`, {
-      description: "For this demo, you'll be logged in automatically in 3 seconds."
+    toast.success(`קישור קסם נשלח אל ${email}`, {
+      description: "להדגמה זו בלבד, תתחבר/י אוטומטית תוך 3 שניות."
     });
     
     setTimeout(() => {
@@ -46,11 +58,11 @@ const LoginPage = () => {
       
       if (isStaff) {
         localStorage.setItem('butiUser', JSON.stringify({
-          name: 'BUTI Staff',
+          name: 'צוות BUTI',
           avatar: 'BUTI',
           isAdmin: true
         }));
-        toast.success('Logged in as BUTI Staff');
+        toast.success('התחברת כצוות BUTI');
       } else {
         localStorage.setItem('butiUser', JSON.stringify({
           name: email.split('@')[0],
@@ -93,11 +105,10 @@ const LoginPage = () => {
       </main>
       
       <footer className="p-4 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} BUTI Café • Dizengoff St, Tel Aviv
+        © {new Date().getFullYear()} קפה BUTI • רחוב דיזנגוף, תל אביב
       </footer>
     </div>
   );
 };
 
 export default LoginPage;
-

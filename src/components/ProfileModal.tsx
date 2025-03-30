@@ -60,14 +60,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            {isAdmin ? 'BUTI Staff Profile' : 'Your Profile'}
+            {isAdmin ? 'פרופיל צוות BUTI' : 'הפרופיל שלך'}
           </DialogTitle>
         </DialogHeader>
         <div className="py-4 space-y-4">
           <div>
-            <label className="text-sm font-medium mb-1 block">Display Name</label>
+            <label className="text-sm font-medium mb-1 block">שם תצוגה</label>
             <Input
-              placeholder="Your name"
+              placeholder="השם שלך"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full"
@@ -80,12 +80,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                 <Logo size="small" />
               </div>
               <p className="mt-2 text-sm text-center text-muted-foreground">
-                Staff avatar is fixed
+                אווטר צוות קבוע
               </p>
             </div>
           ) : (
             <div>
-              <label className="text-sm font-medium mb-2 block">Choose an Emoji Avatar</label>
+              <label className="text-sm font-medium mb-2 block">בחר/י אימוג'י לאווטר</label>
               <div className="grid grid-cols-7 gap-2">
                 {EMOJIS.map((emoji) => (
                   <button
@@ -105,7 +105,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
         <DialogFooter className="flex justify-between sm:justify-between">
           <Button variant="outline" onClick={onLogout} className="gap-1">
             <LogOut size={16} />
-            Logout
+            התנתק/י
           </Button>
           <Button 
             onClick={handleSave} 
@@ -113,7 +113,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
             className="gap-1"
           >
             <Save size={16} />
-            {saving ? 'Saving...' : 'Save Profile'}
+            {saving ? 'שומר...' : 'שמור פרופיל'}
           </Button>
         </DialogFooter>
       </DialogContent>

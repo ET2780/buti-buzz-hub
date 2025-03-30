@@ -21,7 +21,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenSongModal, 
   onOpenProfileModal, 
   activeUsersCount = 0,
-  profile = { name: 'Guest', avatar: '😊' }
+  profile = { name: 'אורח', avatar: '😊' }
 }) => {
   return (
     <div className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
@@ -32,19 +32,19 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4">
         <div className="flex items-center gap-2 text-muted-foreground mb-6">
           <MessageSquare size={16} />
-          <span>BUTI Chat</span>
+          <span>צ'אט BUTI</span>
         </div>
         
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
           <Users size={14} />
-          <span>{activeUsersCount} users online</span>
+          <span>{activeUsersCount} משתמשים מחוברים</span>
         </div>
       </div>
       
       <div className="p-4 flex-grow">
         <PerkCard 
-          title="Today's Perk" 
-          description="Buy 1 coffee, get a cookie free! ☕🍪" 
+          title="הטבת היום" 
+          description="קנו קפה אחד, קבלו עוגיה חינם! ☕🍪" 
         />
         
         <Button 
@@ -52,7 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           className="w-full mt-6 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center gap-2"
         >
           <Music size={16} />
-          <span>Suggest a Song</span>
+          <span>הצע/י שיר</span>
         </Button>
       </div>
       
@@ -68,7 +68,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             isAdmin={profile.isAdmin}
             size="sm"
           />
-          <span>{profile.isAdmin ? 'BUTI Staff' : profile.name}</span>
+          <span>{profile.isAdmin ? 'צוות BUTI' : profile.name}</span>
         </Button>
       </div>
     </div>
