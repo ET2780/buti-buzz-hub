@@ -30,12 +30,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const mockEmail = localStorage.getItem('tempMockEmail');
       const mockIsStaff = localStorage.getItem('tempMockIsStaff') === 'true';
       const mockGuestName = localStorage.getItem('tempMockGuestName');
+      const mockAvatar = localStorage.getItem('tempMockAvatar');
       
       if (mockEmail) {
         const mockUser: User = {
           id: mockEmail,
           name: mockGuestName || (mockEmail.includes('guest') ? `אורח/ת ${Math.floor(Math.random() * 1000)}` : mockEmail.split('@')[0]),
-          avatar: '😊',
+          avatar: mockAvatar || '😊',
           isAdmin: mockIsStaff
         };
         

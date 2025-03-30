@@ -21,41 +21,9 @@ const LoginPage = () => {
     signInWithGoogle();
   };
 
-  const handleLoginWithEmail = (email: string) => {
-    // Check if it's a staff login (for demo purposes)
-    const isStaff = email.endsWith('@buti.cafe') || email === 'admin@buti.cafe';
-    
-    // For demo purposes only
-    toast.success(`קישור קסם נשלח אל ${email}`, {
-      description: "להדגמה זו בלבד, תתחבר/י אוטומטית תוך 3 שניות."
-    });
-    
-    // Simulate login for demo
-    setTimeout(() => {
-      // In a real app, we'd validate the token from the magic link here
-      localStorage.setItem('tempMockEmail', email);
-      localStorage.setItem('tempMockIsStaff', isStaff ? 'true' : 'false');
-      
-      // Show BUTI logo after login before navigating
-      const loadingContainer = document.createElement('div');
-      loadingContainer.className = 'fixed inset-0 bg-white flex items-center justify-center z-50';
-      
-      const logoElement = document.createElement('div');
-      logoElement.className = 'animate-pulse';
-      loadingContainer.appendChild(logoElement);
-      
-      document.body.appendChild(loadingContainer);
-
-      setTimeout(() => {
-        document.body.removeChild(loadingContainer);
-        navigate('/buti');
-      }, 1500);
-    }, 3000);
-  };
-
-  const handleLoginAsGuest = () => {
+  const handleLoginAsGuest = (name: string, avatar: string) => {
     // Create a guest user
-    const guestName = `אורח/ת ${Math.floor(Math.random() * 1000)}`;
+    const guestName = name.trim();
     
     toast.success(`ברוך הבא, ${guestName}!`, {
       description: "מתחבר/ת כאורח/ת..."
@@ -65,6 +33,7 @@ const LoginPage = () => {
     localStorage.setItem('tempMockEmail', `guest_${Date.now()}@buti.cafe`);
     localStorage.setItem('tempMockIsStaff', 'false');
     localStorage.setItem('tempMockGuestName', guestName);
+    localStorage.setItem('tempMockAvatar', avatar);
     
     // Show BUTI logo after login before navigating
     const loadingContainer = document.createElement('div');
@@ -96,7 +65,6 @@ const LoginPage = () => {
         <div className="w-full max-w-md">
           <LoginForm 
             onLoginWithGoogle={handleLoginWithGoogle}
-            onLoginWithEmail={handleLoginWithEmail}
             onLoginAsGuest={handleLoginAsGuest}
           />
         </div>
