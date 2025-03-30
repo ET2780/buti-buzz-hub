@@ -1,44 +1,36 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MessageSquare, Music, Users, Gift, Settings } from 'lucide-react';
 import Logo from './Logo';
 import PerkCard from './PerkCard';
 import { Button } from '@/components/ui/button';
 import ButiAvatar from './ButiAvatar';
-import { Perk, User } from '@/types';
+import { Perk } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
-import { PerksService } from '@/services/PerksService';
 
 interface SidebarProps {
   onOpenSongModal: () => void;
   onOpenProfileModal: () => void;
   onOpenPerksModal?: () => void;
   activeUsersCount?: number;
+  activePerks?: Perk[];
+  isLoadingPerks?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
   onOpenSongModal, 
   onOpenProfileModal,
   onOpenPerksModal,
-  activeUsersCount = 0
+  activeUsersCount = 0,
+  activePerks = [],
+  isLoadingPerks = false
 }) => {
   const { user, isAdmin } = useAuth();
-  const [activePerk, setActivePerk] = useState<Perk | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [currentPerkIndex, setCurrentPerkIndex] = useState(0);
 
-  useEffect(() => {
-    fetchActivePerks();
-  }, []);
-
-  const fetchActivePerks = async () => {
-    try {
-      setIsLoading(true);
-      const perks = await PerksService.getActivePerks();
-      setActivePerk(perks.length > 0 ? perks[0] : null);
-    } catch (error) {
-      console.error('Failed to fetch active perks:', error);
-    } finally {
-      setIsLoading(false);
+  const nextPerk = () => {
+    if (activePerks.length > 0) {
+      setCurrentPerkIndex((currentPerkIndex + 1) % activePerks.length);
     }
   };
 
@@ -61,15 +53,27 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
       
       <div className="p-4 flex-grow">
-        {isLoading ? (
+        {isLoadingPerks ? (
           <div className="p-4 border rounded-md text-center text-muted-foreground animate-pulse">
             טוען הטבות...
           </div>
-        ) : activePerk ? (
-          <PerkCard 
-            title={activePerk.title} 
-            description={activePerk.description} 
-          />
+        ) : activePerks.length > 0 ? (
+          <div>
+            <PerkCard 
+              title={activePerks[currentPerkIndex].title} 
+              description={activePerks[currentPerkIndex].description} 
+            />
+            {activePerks.length > 1 && (
+              <Button 
+                onClick={nextPerk} 
+                variant="ghost" 
+                size="sm" 
+                className="w-full mt-2"
+              >
+                הטבה הבאה ←
+              </Button>
+            )}
+          </div>
         ) : (
           <div className="p-4 border rounded-md text-center text-muted-foreground">
             אין הטבות פעילות כרגע

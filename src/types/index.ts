@@ -1,7 +1,25 @@
+
 export interface User {
   id: string;
   name: string;
   avatar: string;
   isAdmin: boolean;
   email?: string | null;
+}
+
+export interface Perk {
+  id: string;
+  title: string;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Message {
+  id: string;
+  sender: User;
+  text: string;
+  timestamp: Date;
+  isCurrentUser: boolean;
 }

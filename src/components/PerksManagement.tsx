@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Perk } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -73,6 +74,7 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
       setPerks([createdPerk, ...perks]);
       setNewPerk({ title: '', description: '', is_active: true });
       toast.success('ההטבה נוספה בהצלחה');
+      onPerksUpdated(); // Notify parent to refresh perks
     } catch (error) {
       console.error('Failed to add perk:', error);
       toast.error('Failed to add perk');
@@ -103,6 +105,7 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
       
       setIsEditing(null);
       toast.success('ההטבה עודכנה בהצלחה');
+      onPerksUpdated(); // Notify parent to refresh perks
     } catch (error) {
       console.error('Failed to update perk:', error);
       toast.error('Failed to update perk');
@@ -123,6 +126,7 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
       );
       
       toast.success(currentState ? 'ההטבה הושבתה' : 'ההטבה הופעלה');
+      onPerksUpdated(); // Notify parent to refresh perks
     } catch (error) {
       console.error('Failed to toggle perk state:', error);
       toast.error('Failed to update perk');
@@ -140,6 +144,7 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
       
       setPerks(perks.filter((perk) => perk.id !== id));
       toast.success('ההטבה נמחקה בהצלחה');
+      onPerksUpdated(); // Notify parent to refresh perks
     } catch (error) {
       console.error('Failed to delete perk:', error);
       toast.error('Failed to delete perk');
