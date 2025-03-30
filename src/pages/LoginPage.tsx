@@ -19,6 +19,7 @@ const LoginPage = () => {
 
   const handleLoginWithGoogle = () => {
     signInWithGoogle();
+    // Don't navigate here - we'll let the auth state change handle navigation
   };
 
   const handleLoginAsGuest = (name: string, avatar: string) => {
