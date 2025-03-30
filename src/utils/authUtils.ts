@@ -15,7 +15,8 @@ export const checkForDemoLogin = () => {
       id: mockEmail || mockGuestName || `guest-${Date.now()}`,
       name: mockGuestName || (mockEmail ? (mockEmail.includes('guest') ? `אורח/ת ${Math.floor(Math.random() * 1000)}` : mockEmail.split('@')[0]) : 'Guest'),
       avatar: mockAvatar || '😊',
-      isAdmin: mockIsStaff
+      isAdmin: mockIsStaff,
+      email: mockEmail || null
     };
     
     return mockUser;
@@ -30,11 +31,12 @@ export const signOutUser = async () => {
   localStorage.removeItem('tempMockIsStaff');
   localStorage.removeItem('tempMockGuestName');
   localStorage.removeItem('tempMockAvatar');
+  localStorage.removeItem('tempMockResetEmail');
 };
 
 // Function to create an admin user
-export const createAdminUser = (name: string, avatar: string = '😎') => {
-  localStorage.setItem('tempMockEmail', `admin-${Date.now()}@buti.com`);
+export const createAdminUser = (name: string, avatar: string = '😎', email: string = '') => {
+  localStorage.setItem('tempMockEmail', email || `admin-${Date.now()}@buti.com`);
   localStorage.setItem('tempMockIsStaff', 'true');
   localStorage.setItem('tempMockGuestName', name);
   localStorage.setItem('tempMockAvatar', avatar);

@@ -5,11 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { createAdminUser } from '@/utils/authUtils';
+import { Eye, EyeOff } from 'lucide-react';
 
 const LoginForm = () => {
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetPassword, setIsResetPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleGuestLogin = async (e: React.FormEvent) => {
@@ -28,9 +33,36 @@ const LoginForm = () => {
       const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
       
       if (isAdmin) {
-        // Create an admin user
-        createAdminUser(name, randomAvatar);
-        toast.success('התחברת כמנהל/ת');
+        // Admin login needs email and password
+        if (!email.trim() || (!isResetPassword && !password.trim())) {
+          toast.error('נא להזין אימייל וסיסמה למנהלים');
+          setIsLoading(false);
+          return;
+        }
+
+        if (isResetPassword) {
+          // Logic for password reset
+          // Here we just store the email in localStorage for demo purposes
+          localStorage.setItem('tempMockResetEmail', email);
+          toast.success('קישור לאיפוס סיסמה נשלח לאימייל שלך');
+          setTimeout(() => {
+            toast.info('למטרות הדגמה, התחברת כמנהל/ת');
+            createAdminUser(name, randomAvatar, email);
+            navigate('/buti');
+          }, 2000);
+        } else {
+          // Demo admin authentication 
+          // In a real app, this would validate against a database
+          if (email === 'admin@buti.cafe' && password === 'admin123') {
+            createAdminUser(name, randomAvatar, email);
+            toast.success('התחברת כמנהל/ת');
+            navigate('/buti');
+          } else {
+            toast.error('אימייל או סיסמה שגויים');
+            setIsLoading(false);
+            return;
+          }
+        }
       } else {
         // Regular guest user
         localStorage.setItem('tempMockGuestName', name);
@@ -41,15 +73,18 @@ const LoginForm = () => {
         document.dispatchEvent(new Event('customStorageEvent'));
         
         toast.success('ברוך הבא!');
+        navigate('/buti');
       }
-      
-      navigate('/buti');
     } catch (error) {
       console.error('Login error:', error);
       toast.error('שגיאה בהתחברות, אנא נסה שוב');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -84,9 +119,63 @@ const LoginForm = () => {
           </label>
         </div>
 
+        {isAdmin && (
+          <>
+            <div>
+              <Input
+                type="email"
+                placeholder="אימייל"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="text-right"
+              />
+            </div>
+
+            {!isResetPassword && (
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="סיסמה"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="text-right pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute inset-y-0 left-0 pl-3 flex items-center"
+                >
+                  {showPassword ? 
+                    <EyeOff className="h-5 w-5 text-gray-400" /> : 
+                    <Eye className="h-5 w-5 text-gray-400" />
+                  }
+                </button>
+              </div>
+            )}
+
+            <div className="text-left">
+              <button
+                type="button"
+                onClick={() => setIsResetPassword(!isResetPassword)}
+                className="text-sm text-primary hover:underline"
+              >
+                {isResetPassword ? 'חזרה להתחברות' : 'שכחתי סיסמה'}
+              </button>
+            </div>
+          </>
+        )}
+
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? 'מתחבר...' : 'כניסה לצ\'אט'}
+          {isLoading ? 'מתחבר...' : isAdmin 
+            ? (isResetPassword ? 'שליחת קישור לאיפוס סיסמה' : 'התחברות כמנהל/ת') 
+            : 'כניסה לצ\'אט'}
         </Button>
+
+        {isAdmin && (
+          <div className="text-xs text-muted-foreground text-center mt-2">
+            * לצורך הדגמה: admin@buti.cafe / admin123
+          </div>
+        )}
       </form>
     </div>
   );
