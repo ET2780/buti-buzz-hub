@@ -1,10 +1,9 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import Logo from '@/components/Logo';
 import LoginForm from '@/components/LoginForm';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 const LoginPage = () => {
   const navigate = useNavigate();

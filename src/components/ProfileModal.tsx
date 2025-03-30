@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { LogOut, Save, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import Logo from './Logo';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 const EMOJIS = ['😊', '😎', '🤓', '🧠', '👾', '🤖', '👋', '🦄', '🌟', '🍕', '🍩', '☕', '🌈', '🚀'];
 

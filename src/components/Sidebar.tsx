@@ -6,7 +6,7 @@ import PerkCard from './PerkCard';
 import { Button } from '@/components/ui/button';
 import ButiAvatar from './ButiAvatar';
 import { Perk, User } from '@/types';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { PerksService } from '@/services/PerksService';
 
 interface SidebarProps {
