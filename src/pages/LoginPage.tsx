@@ -37,6 +37,21 @@ const LoginPage = () => {
     localStorage.setItem('tempMockGuestName', guestName);
     localStorage.setItem('tempMockAvatar', avatar);
     
+    console.log("Guest login data stored in localStorage");
+    
+    // Trigger a storage event for the AuthContext to pick up
+    // This helps when the AuthContext is in another tab or component
+    try {
+      const storageEvent = new StorageEvent('storage', {
+        key: 'tempMockEmail',
+        newValue: localStorage.getItem('tempMockEmail')
+      });
+      window.dispatchEvent(storageEvent);
+      console.log("Dispatched storage event");
+    } catch (e) {
+      console.error("Could not dispatch storage event:", e);
+    }
+    
     // Show BUTI logo after login before navigating
     const loadingContainer = document.createElement('div');
     loadingContainer.className = 'fixed inset-0 bg-white flex items-center justify-center z-50';
@@ -47,10 +62,15 @@ const LoginPage = () => {
     
     document.body.appendChild(loadingContainer);
 
-    // Force an immediate check for mock login in AuthContext
+    // Force an immediate navigation to chat page
+    console.log("Navigating to /buti after guest login");
+    navigate('/buti');
+    
+    // Remove loading overlay after a short delay
     setTimeout(() => {
-      document.body.removeChild(loadingContainer);
-      navigate('/buti');
+      if (document.body.contains(loadingContainer)) {
+        document.body.removeChild(loadingContainer);
+      }
     }, 1500);
   };
 

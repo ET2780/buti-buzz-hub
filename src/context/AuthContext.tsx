@@ -24,33 +24,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check for demo login from localStorage
-    const checkDemoLogin = () => {
-      console.log("Checking for demo login");
-      const mockEmail = localStorage.getItem('tempMockEmail');
-      const mockIsStaff = localStorage.getItem('tempMockIsStaff') === 'true';
-      const mockGuestName = localStorage.getItem('tempMockGuestName');
-      const mockAvatar = localStorage.getItem('tempMockAvatar');
+  // Function to check for demo login from localStorage
+  const checkDemoLogin = () => {
+    console.log("Checking for demo login");
+    const mockEmail = localStorage.getItem('tempMockEmail');
+    const mockIsStaff = localStorage.getItem('tempMockIsStaff') === 'true';
+    const mockGuestName = localStorage.getItem('tempMockGuestName');
+    const mockAvatar = localStorage.getItem('tempMockAvatar');
+    
+    if (mockEmail) {
+      console.log("Found demo login for:", mockEmail);
+      const mockUser: User = {
+        id: mockEmail,
+        name: mockGuestName || (mockEmail.includes('guest') ? `אורח/ת ${Math.floor(Math.random() * 1000)}` : mockEmail.split('@')[0]),
+        avatar: mockAvatar || '😊',
+        isAdmin: mockIsStaff
+      };
       
-      if (mockEmail) {
-        console.log("Found demo login for:", mockEmail);
-        const mockUser: User = {
-          id: mockEmail,
-          name: mockGuestName || (mockEmail.includes('guest') ? `אורח/ת ${Math.floor(Math.random() * 1000)}` : mockEmail.split('@')[0]),
-          avatar: mockAvatar || '😊',
-          isAdmin: mockIsStaff
-        };
-        
-        setUser(mockUser);
-        setIsAdmin(mockIsStaff);
-        setIsLoading(false);
-        return true;
-      }
-      
-      return false;
-    };
+      setUser(mockUser);
+      setIsAdmin(mockIsStaff);
+      setIsLoading(false);
+      return true;
+    }
+    
+    return false;
+  };
 
+  useEffect(() => {
+    console.log("AuthContext initialized");
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
@@ -88,15 +90,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initializeAuth();
 
     // Add a listener for storage changes to handle cases where localStorage is updated
-    window.addEventListener('storage', (event) => {
-      if (event.key === 'tempMockEmail' && event.newValue) {
-        console.log("Storage event detected, checking demo login");
+    const handleStorageChange = (event: StorageEvent) => {
+      console.log("Storage event detected:", event.key);
+      if (event.key === 'tempMockEmail') {
+        console.log("Storage event detected for tempMockEmail with value:", event.newValue);
         checkDemoLogin();
       }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Add direct event listener for localStorage updates in the same window
+    document.addEventListener('customStorageEvent', () => {
+      console.log("Custom storage event detected");
+      checkDemoLogin();
     });
 
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('storage', handleStorageChange);
+      document.removeEventListener('customStorageEvent', () => {
+        console.log("Custom storage event listener removed");
+      });
     };
   }, []);
 
