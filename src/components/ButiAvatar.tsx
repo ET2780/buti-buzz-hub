@@ -4,15 +4,15 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Logo from './Logo';
 
 interface ButiAvatarProps {
-  avatar: string;
-  name: string;
+  avatar?: string;
+  name?: string;
   isAdmin?: boolean;
   size?: 'sm' | 'md' | 'lg'; 
 }
 
 const ButiAvatar: React.FC<ButiAvatarProps> = ({ 
-  avatar, 
-  name, 
+  avatar = '', 
+  name = '', 
   isAdmin = false,
   size = 'md'
 }) => {

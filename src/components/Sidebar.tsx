@@ -1,29 +1,47 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageSquare, Music, Users, Gift, Settings } from 'lucide-react';
 import Logo from './Logo';
 import PerkCard from './PerkCard';
 import { Button } from '@/components/ui/button';
 import ButiAvatar from './ButiAvatar';
 import { Perk, User } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { PerksService } from '@/services/PerksService';
 
 interface SidebarProps {
   onOpenSongModal: () => void;
   onOpenProfileModal: () => void;
   onOpenPerksModal?: () => void;
   activeUsersCount?: number;
-  profile?: User;
-  activePerk?: Perk;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
   onOpenSongModal, 
   onOpenProfileModal,
   onOpenPerksModal,
-  activeUsersCount = 0,
-  profile = { name: 'אורח', avatar: '😊' },
-  activePerk
+  activeUsersCount = 0
 }) => {
+  const { user, isAdmin } = useAuth();
+  const [activePerk, setActivePerk] = useState<Perk | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchActivePerks();
+  }, []);
+
+  const fetchActivePerks = async () => {
+    try {
+      setIsLoading(true);
+      const perks = await PerksService.getActivePerks();
+      setActivePerk(perks.length > 0 ? perks[0] : null);
+    } catch (error) {
+      console.error('Failed to fetch active perks:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
       <div className="p-4 border-b border-sidebar-border">
@@ -43,7 +61,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
       
       <div className="p-4 flex-grow">
-        {activePerk ? (
+        {isLoading ? (
+          <div className="p-4 border rounded-md text-center text-muted-foreground animate-pulse">
+            טוען הטבות...
+          </div>
+        ) : activePerk ? (
           <PerkCard 
             title={activePerk.title} 
             description={activePerk.description} 
@@ -62,7 +84,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <span>הצע/י שיר</span>
         </Button>
         
-        {profile.isAdmin && onOpenPerksModal && (
+        {isAdmin && onOpenPerksModal && (
           <Button 
             onClick={onOpenPerksModal} 
             className="w-full mt-2 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center gap-2"
@@ -80,12 +102,12 @@ const Sidebar: React.FC<SidebarProps> = ({
           className="w-full flex items-center justify-start gap-2"
         >
           <ButiAvatar 
-            avatar={profile.avatar} 
-            name={profile.name} 
-            isAdmin={profile.isAdmin}
+            avatar={user?.avatar} 
+            name={user?.name || ''} 
+            isAdmin={user?.isAdmin}
             size="sm"
           />
-          <span>{profile.isAdmin ? 'צוות BUTI' : profile.name}</span>
+          <span>{user?.isAdmin ? 'צוות BUTI' : user?.name}</span>
         </Button>
       </div>
     </div>

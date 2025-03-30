@@ -1,12 +1,42 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import PerkCard from '@/components/PerkCard';
+import { useAuth } from '@/context/AuthContext';
+import { PerksService } from '@/services/PerksService';
+import { Perk } from '@/types';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [activePerk, setActivePerk] = useState<Perk | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchActivePerks();
+  }, []);
+
+  const fetchActivePerks = async () => {
+    try {
+      setIsLoading(true);
+      const perks = await PerksService.getActivePerks();
+      setActivePerk(perks.length > 0 ? perks[0] : null);
+    } catch (error) {
+      console.error('Failed to fetch active perks:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCTAClick = () => {
+    if (user) {
+      navigate('/buti');
+    } else {
+      navigate('/login');
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-buti-light">
@@ -24,18 +54,29 @@ const LandingPage = () => {
         </p>
         
         <Button 
-          onClick={() => navigate('/login')} 
+          onClick={handleCTAClick} 
           size="lg" 
           className="text-lg px-8 py-6 mb-12"
         >
-          כניסה לצ'אט BUTI
+          {user ? 'חזרה לצ\'אט BUTI' : 'כניסה לצ\'אט BUTI'}
         </Button>
         
         <div className="w-full max-w-sm mx-auto opacity-85">
-          <PerkCard 
-            title="הטבת היום" 
-            description="קנו קפה אחד, קבלו עוגיה חינם! ☕🍪" 
-          />
+          {isLoading ? (
+            <div className="p-4 border rounded-md text-center text-muted-foreground animate-pulse">
+              טוען הטבות...
+            </div>
+          ) : activePerk ? (
+            <PerkCard 
+              title={activePerk.title} 
+              description={activePerk.description} 
+            />
+          ) : (
+            <PerkCard 
+              title="הצטרפו עכשיו" 
+              description="התחברו כדי לראות את ההטבות העדכניות ביותר שלנו!" 
+            />
+          )}
         </div>
       </main>
       

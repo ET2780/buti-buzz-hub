@@ -18,7 +18,13 @@ export interface Perk {
   id: string;
   title: string;
   description: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type UserRole = 'admin' | 'customer';
+
+export interface UserWithRole extends User {
+  role: UserRole;
 }

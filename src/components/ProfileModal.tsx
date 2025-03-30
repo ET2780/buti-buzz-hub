@@ -11,47 +11,37 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import Logo from './Logo';
+import { useAuth } from '@/context/AuthContext';
 
 const EMOJIS = ['😊', '😎', '🤓', '🧠', '👾', '🤖', '👋', '🦄', '🌟', '🍕', '🍩', '☕', '🌈', '🚀'];
 
 interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  profile: {
-    name: string;
-    avatar: string;
-    isAdmin?: boolean;
-  };
-  onUpdateProfile: (profile: { name: string; avatar: string; isAdmin?: boolean }) => void;
-  onLogout: () => void;
 }
 
 const ProfileModal: React.FC<ProfileModalProps> = ({
   isOpen,
   onClose,
-  profile,
-  onUpdateProfile,
-  onLogout,
 }) => {
-  const [name, setName] = useState(profile.name);
-  const [avatar, setAvatar] = useState(profile.avatar);
+  const { user, updateProfile, signOut } = useAuth();
+  const [name, setName] = useState(user?.name || '');
+  const [avatar, setAvatar] = useState(user?.avatar || '😊');
   const [saving, setSaving] = useState(false);
-  const isAdmin = profile.isAdmin === true;
+  const isAdmin = user?.isAdmin === true;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (name.trim()) {
       setSaving(true);
-      // Simulate API request
-      setTimeout(() => {
-        onUpdateProfile({ 
-          name, 
-          avatar, 
-          isAdmin: profile.isAdmin // Preserve admin status
-        });
-        setSaving(false);
-        onClose();
-      }, 800);
+      await updateProfile({ name, avatar });
+      setSaving(false);
+      onClose();
     }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    onClose();
   };
 
   return (
@@ -103,7 +93,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
           )}
         </div>
         <DialogFooter className="flex justify-between sm:justify-between">
-          <Button variant="outline" onClick={onLogout} className="gap-1">
+          <Button variant="outline" onClick={handleLogout} className="gap-1">
             <LogOut size={16} />
             התנתק/י
           </Button>
