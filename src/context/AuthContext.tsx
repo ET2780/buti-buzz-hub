@@ -1,10 +1,10 @@
-
 import { createContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@/types';
 import { toast } from 'sonner';
 import { signOutUser, checkForDemoLogin } from '@/utils/authUtils';
 import { setupAuthListeners } from '@/utils/authInitializer';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
   user: User | null;
@@ -162,9 +162,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setUser(null);
       setIsAdmin(false);
-      toast.success('Signed out successfully');
+      toast.success('התנתקת בהצלחה');
+      
+      // Navigate to login page after sign out
+      window.location.href = '/login';
     } catch (error: any) {
-      toast.error(error.message || 'Sign out failed');
+      toast.error(error.message || 'התנתקות נכשלה');
     }
   };
 
