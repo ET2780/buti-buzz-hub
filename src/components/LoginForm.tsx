@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { createAdminUser } from '@/utils/authUtils';
 import { Eye, EyeOff } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const LoginForm = () => {
   const [name, setName] = useState('');
@@ -42,23 +43,53 @@ const LoginForm = () => {
 
         if (isResetPassword) {
           // Logic for password reset
-          // Here we just store the email in localStorage for demo purposes
-          localStorage.setItem('tempMockResetEmail', email);
-          toast.success('קישור לאיפוס סיסמה נשלח לאימייל שלך');
-          setTimeout(() => {
-            toast.info('למטרות הדגמה, התחברת כמנהל/ת');
-            createAdminUser(name, randomAvatar, email);
-            navigate('/buti');
-          }, 2000);
+          try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+              redirectTo: window.location.origin + '/reset-password',
+            });
+            
+            if (error) throw error;
+            
+            toast.success('קישור לאיפוס סיסמה נשלח לאימייל שלך');
+            
+            // For demo purposes, also log in as admin
+            setTimeout(() => {
+              toast.info('למטרות הדגמה, התחברת כמנהל/ת');
+              createAdminUser(name, randomAvatar, email);
+              navigate('/buti');
+            }, 2000);
+          } catch (error: any) {
+            console.error('Password reset error:', error);
+            toast.error(error.message || 'שגיאה בשליחת קישור לאיפוס סיסמה');
+            return;
+          }
         } else {
-          // Demo admin authentication 
-          // In a real app, this would validate against a database
-          if (email === 'admin@buti.cafe' && password === 'admin123') {
-            createAdminUser(name, randomAvatar, email);
-            toast.success('התחברת כמנהל/ת');
-            navigate('/buti');
-          } else {
-            toast.error('אימייל או סיסמה שגויים');
+          // Try to sign in with Supabase first
+          try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+            
+            if (error) {
+              // For demo purposes, fallback to mock login if using the demo credentials
+              if (email === 'admin@buti.cafe' && password === 'admin123') {
+                createAdminUser(name, randomAvatar, email);
+                toast.success('התחברת כמנהל/ת (מצב הדגמה)');
+                navigate('/buti');
+                return;
+              } else {
+                throw error;
+              }
+            }
+            
+            if (data.user) {
+              toast.success('התחברת בהצלחה');
+              navigate('/buti');
+            }
+          } catch (error: any) {
+            console.error('Login error:', error);
+            toast.error(error.message || 'אימייל או סיסמה שגויים');
             setIsLoading(false);
             return;
           }
