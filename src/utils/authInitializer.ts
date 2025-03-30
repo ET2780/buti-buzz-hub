@@ -9,6 +9,8 @@ export const setupAuthListeners = ({
   setIsLoading,
   fetchUserProfile
 }) => {
+  console.log("Setting up auth listeners");
+  
   // Set up auth state listener
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
     async (event, newSession) => {
@@ -44,28 +46,39 @@ export const setupAuthListeners = ({
 
   // Check for existing session
   const initializeAuth = async () => {
-    const { data: { session: initialSession } } = await supabase.auth.getSession();
-    console.log("Initial session check:", initialSession?.user?.id || "No session");
-    setSession(initialSession);
+    try {
+      const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error("Error getting initial session:", error);
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log("Initial session check:", initialSession?.user?.id || "No session");
+      setSession(initialSession);
 
-    if (initialSession?.user) {
-      try {
-        const profile = await fetchUserProfile(initialSession.user.id);
-        setUser(profile);
-        setIsAdmin(profile.isAdmin);
-      } catch (error) {
-        console.error("Error fetching initial user profile:", error);
-        setUser(null);
-        setIsAdmin(false);
+      if (initialSession?.user) {
+        try {
+          const profile = await fetchUserProfile(initialSession.user.id);
+          setUser(profile);
+          setIsAdmin(profile.isAdmin);
+        } catch (error) {
+          console.error("Error fetching initial user profile:", error);
+          setUser(null);
+          setIsAdmin(false);
+        }
+      } else {
+        // Check for demo login if no supabase session
+        const demoUser = checkForDemoLogin();
+        if (demoUser) {
+          setUser(demoUser);
+          setIsAdmin(demoUser.isAdmin);
+        }
       }
-      setIsLoading(false);
-    } else {
-      // Check for demo login if no supabase session
-      const demoUser = checkForDemoLogin();
-      if (demoUser) {
-        setUser(demoUser);
-        setIsAdmin(demoUser.isAdmin);
-      }
+    } catch (error) {
+      console.error("Error in initializeAuth:", error);
+    } finally {
       setIsLoading(false);
     }
   };

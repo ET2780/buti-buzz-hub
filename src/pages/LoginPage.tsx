@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -13,11 +14,21 @@ const LoginPage = () => {
   useEffect(() => {
     // Check for authentication success from URL parameters (after OAuth redirect)
     const params = new URLSearchParams(location.search);
-    if (params.get('auth') === 'success') {
+    const authStatus = params.get('auth');
+    
+    if (authStatus === 'success') {
+      console.log("Auth success detected in URL params");
       toast.success("התחברת בהצלחה!", {
         description: "מועבר/ת לדף הצ'אט..."
       });
+    } else if (authStatus === 'error') {
+      console.error("Auth error detected in URL params");
+      const errorMessage = params.get('error_description') || 'Unknown error occurred';
+      toast.error(`Authentication error: ${errorMessage}`);
     }
+    
+    // Log authentication state for debugging
+    console.log("Auth state on login page:", { user, isLoading });
     
     // Redirect to Buti page if user is already logged in
     if (user && !isLoading) {
@@ -30,6 +41,7 @@ const LoginPage = () => {
     console.log("Starting Google login flow");
     try {
       await signInWithGoogle();
+      // The page will be redirected to Google for authentication
       // Don't navigate here - we'll let the auth state change or redirect handle navigation
     } catch (error) {
       console.error("Google login error:", error);

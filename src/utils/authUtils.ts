@@ -76,15 +76,35 @@ export const signInWithEmail = async () => {
 export const signInWithGoogle = async () => {
   console.log("Attempting Google sign in");
   
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/login?auth=success`
+  try {
+    // Get the origin of the current URL for the redirect
+    const origin = window.location.origin;
+    const redirectTo = `${origin}/login?auth=success`;
+    
+    console.log("Using redirect URL:", redirectTo);
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectTo,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        }
+      }
+    });
+    
+    if (error) {
+      console.error("Google auth error:", error);
+      throw error;
     }
-  });
-  
-  if (error) throw error;
-  console.log("Google auth initiated:", data);
+    
+    console.log("Google auth initiated successfully:", data);
+    return data;
+  } catch (error) {
+    console.error("Google sign in failed:", error);
+    throw error;
+  }
 };
 
 export const signOutUser = async () => {
