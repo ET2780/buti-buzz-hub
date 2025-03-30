@@ -11,6 +11,7 @@ import {
   checkForDemoLogin,
   fetchUserProfile
 } from '@/utils/authUtils';
+import { setupAuthListeners } from '@/utils/authInitializer';
 
 interface AuthContextType {
   session: Session | null;
@@ -34,9 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     console.log("AuthContext initialized");
     
-    // Import auth initialization logic to avoid circular dependencies
-    const { setupAuthListeners } = require('@/utils/authInitializer');
-    
+    // Properly import auth initialization logic using ES modules instead of require
     return setupAuthListeners({
       setSession,
       setUser,
