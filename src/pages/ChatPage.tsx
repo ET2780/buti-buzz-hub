@@ -7,19 +7,18 @@ import Sidebar from '@/components/Sidebar';
 import ChatFeed from '@/components/ChatFeed';
 import SongSuggestionModal from '@/components/SongSuggestionModal';
 import ProfileModal from '@/components/ProfileModal';
+import PerksManagement from '@/components/PerksManagement';
+import { Message, Perk, User } from '@/types';
 
-// Define the Message interface to ensure consistent typing
-interface Message {
-  id: string;
-  sender: {
-    name: string;
-    avatar: string;
-    isAdmin?: boolean;
-  };
-  text: string;
-  timestamp: Date;
-  isCurrentUser: boolean;
-}
+// Mock initial perk data
+const INITIAL_PERK: Perk = {
+  id: '1',
+  title: 'הטבת היום',
+  description: 'קנו קפה אחד, קבלו עוגיה חינם! ☕🍪',
+  isActive: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
 // Mock data for demo
 const MOCK_MESSAGES: Message[] = [
@@ -58,11 +57,14 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
   const [isSongModalOpen, setSongModalOpen] = useState(false);
   const [isProfileModalOpen, setProfileModalOpen] = useState(false);
-  const [profile, setProfile] = useState({
+  const [isPerksModalOpen, setPerksModalOpen] = useState(false);
+  const [profile, setProfile] = useState<User>({
     name: 'אורח',
     avatar: '😎',
     isAdmin: false
   });
+  const [perks, setPerks] = useState<Perk[]>([INITIAL_PERK]);
+  const [activeUsers, setActiveUsers] = useState(5);
   
   useEffect(() => {
     // Check if user is logged in
@@ -76,6 +78,12 @@ const ChatPage = () => {
     const savedProfile = localStorage.getItem('butiUser');
     if (savedProfile) {
       setProfile(JSON.parse(savedProfile));
+    }
+    
+    // Load saved perks if they exist
+    const savedPerks = localStorage.getItem('butiPerks');
+    if (savedPerks) {
+      setPerks(JSON.parse(savedPerks));
     }
     
     // Set up "simulated" real-time chat
@@ -100,6 +108,9 @@ const ChatPage = () => {
         // Small chance of BUTI staff message
         const isButiStaffMessage = Math.random() < 0.1;
         
+        // Find active perk
+        const activePerk = perks.find(perk => perk.isActive);
+        
         const newMessage: Message = {
           id: uuidv4(),
           sender: isButiStaffMessage 
@@ -108,8 +119,8 @@ const ChatPage = () => {
                 name: users[randomUser], 
                 avatar: avatars[randomUser]
               },
-          text: isButiStaffMessage 
-            ? "אל תשכחו את המבצע של היום: קנו קפה אחד, קבלו עוגיה חינם! ☕🍪" 
+          text: isButiStaffMessage && activePerk
+            ? `אל תשכחו את המבצע של היום: ${activePerk.description}`
             : messages[randomMessage],
           timestamp: new Date(),
           isCurrentUser: false
@@ -117,10 +128,15 @@ const ChatPage = () => {
         
         setMessages(prevMessages => [...prevMessages, newMessage]);
       }
+      
+      // Simulate users joining/leaving
+      if (Math.random() < 0.1) {
+        setActiveUsers(prev => Math.max(3, prev + (Math.random() > 0.5 ? 1 : -1)));
+      }
     }, 20000);
     
     return () => clearInterval(interval);
-  }, [navigate]);
+  }, [navigate, perks]);
   
   const handleSendMessage = (text: string) => {
     const newMessage: Message = {
@@ -140,10 +156,15 @@ const ChatPage = () => {
     });
   };
   
-  const handleUpdateProfile = (newProfile: typeof profile) => {
+  const handleUpdateProfile = (newProfile: User) => {
     setProfile(newProfile);
     localStorage.setItem('butiUser', JSON.stringify(newProfile));
     toast.success('הפרופיל עודכן!');
+  };
+  
+  const handleUpdatePerks = (updatedPerks: Perk[]) => {
+    setPerks(updatedPerks);
+    localStorage.setItem('butiPerks', JSON.stringify(updatedPerks));
   };
   
   const handleLogout = () => {
@@ -152,14 +173,19 @@ const ChatPage = () => {
     navigate('/');
     toast.success('התנתקת בהצלחה');
   };
+  
+  // Get active perk for the sidebar
+  const activePerk = perks.find(perk => perk.isActive);
 
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar 
         onOpenSongModal={() => setSongModalOpen(true)}
         onOpenProfileModal={() => setProfileModalOpen(true)}
-        activeUsersCount={5} // Mock data - in real app, this would be from the backend
+        onOpenPerksModal={profile.isAdmin ? () => setPerksModalOpen(true) : undefined}
+        activeUsersCount={activeUsers}
         profile={profile}
+        activePerk={activePerk}
       />
       
       <div className="flex-1 flex flex-col">
@@ -182,6 +208,15 @@ const ChatPage = () => {
         onUpdateProfile={handleUpdateProfile}
         onLogout={handleLogout}
       />
+      
+      {profile.isAdmin && (
+        <PerksManagement
+          isOpen={isPerksModalOpen}
+          onClose={() => setPerksModalOpen(false)}
+          perks={perks}
+          onUpdatePerks={handleUpdatePerks}
+        />
+      )}
     </div>
   );
 };

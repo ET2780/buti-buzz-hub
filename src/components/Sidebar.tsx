@@ -1,27 +1,28 @@
 
 import React from 'react';
-import { MessageSquare, Music, Users } from 'lucide-react';
+import { MessageSquare, Music, Users, Gift, Settings } from 'lucide-react';
 import Logo from './Logo';
 import PerkCard from './PerkCard';
 import { Button } from '@/components/ui/button';
 import ButiAvatar from './ButiAvatar';
+import { Perk, User } from '@/types';
 
 interface SidebarProps {
   onOpenSongModal: () => void;
   onOpenProfileModal: () => void;
+  onOpenPerksModal?: () => void;
   activeUsersCount?: number;
-  profile?: {
-    name: string;
-    avatar: string;
-    isAdmin?: boolean;
-  };
+  profile?: User;
+  activePerk?: Perk;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
   onOpenSongModal, 
-  onOpenProfileModal, 
+  onOpenProfileModal,
+  onOpenPerksModal,
   activeUsersCount = 0,
-  profile = { name: 'אורח', avatar: '😊' }
+  profile = { name: 'אורח', avatar: '😊' },
+  activePerk
 }) => {
   return (
     <div className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
@@ -42,10 +43,16 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
       
       <div className="p-4 flex-grow">
-        <PerkCard 
-          title="הטבת היום" 
-          description="קנו קפה אחד, קבלו עוגיה חינם! ☕🍪" 
-        />
+        {activePerk ? (
+          <PerkCard 
+            title={activePerk.title} 
+            description={activePerk.description} 
+          />
+        ) : (
+          <div className="p-4 border rounded-md text-center text-muted-foreground">
+            אין הטבות פעילות כרגע
+          </div>
+        )}
         
         <Button 
           onClick={onOpenSongModal} 
@@ -54,6 +61,16 @@ const Sidebar: React.FC<SidebarProps> = ({
           <Music size={16} />
           <span>הצע/י שיר</span>
         </Button>
+        
+        {profile.isAdmin && onOpenPerksModal && (
+          <Button 
+            onClick={onOpenPerksModal} 
+            className="w-full mt-2 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center gap-2"
+          >
+            <Gift size={16} />
+            <span>ניהול הטבות</span>
+          </Button>
+        )}
       </div>
       
       <div className="p-4 border-t border-sidebar-border">
