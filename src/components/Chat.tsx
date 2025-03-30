@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { Message } from '@/types';
-import { Send } from 'lucide-react';
+import { Send, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ButiAvatar from './ButiAvatar';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ChatProps {
   messages: Message[];
@@ -13,6 +14,8 @@ interface ChatProps {
   handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   sendMessage: () => void;
   chatContainerRef: React.RefObject<HTMLDivElement>;
+  connectionError: string | null;
+  isConnecting: boolean;
 }
 
 const Chat: React.FC<ChatProps> = ({
@@ -21,7 +24,9 @@ const Chat: React.FC<ChatProps> = ({
   handleInputChange,
   handleKeyDown,
   sendMessage,
-  chatContainerRef
+  chatContainerRef,
+  connectionError,
+  isConnecting
 }) => {
   const formatTime = (date: Date) => {
     return new Date(date).toLocaleTimeString('he-IL', {
@@ -36,13 +41,28 @@ const Chat: React.FC<ChatProps> = ({
         <h1 className="text-xl font-semibold">צ'אט BUTI</h1>
       </div>
       
+      {connectionError && (
+        <Alert variant="destructive" className="m-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{connectionError}</AlertDescription>
+        </Alert>
+      )}
+      
+      {isConnecting && (
+        <div className="text-center text-muted-foreground py-4 animate-pulse">
+          מתחבר לשרת הצ'אט...
+        </div>
+      )}
+      
       <div 
         ref={chatContainerRef}
         className="flex-1 p-4 overflow-y-auto"
       >
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground py-10">
-            אין הודעות עדיין. התחילו שיחה!
+            {connectionError ? 
+              'שרת הצ'אט אינו זמין כרגע.' : 
+              'אין הודעות עדיין. התחילו שיחה!'}
           </div>
         ) : (
           <div className="space-y-4">
@@ -97,12 +117,13 @@ const Chat: React.FC<ChatProps> = ({
             value={newMessage}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="הקלידו הודעה..."
+            placeholder={connectionError ? "לא ניתן לשלוח הודעות כרגע" : "הקלידו הודעה..."}
             className="flex-1 rounded-full"
+            disabled={!!connectionError}
           />
           <Button
             onClick={sendMessage}
-            disabled={!newMessage.trim()}
+            disabled={!newMessage.trim() || !!connectionError}
             className="rounded-full"
             size="icon"
           >
