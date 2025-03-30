@@ -33,6 +33,14 @@ export const PerksService = {
   },
 
   async createPerk(perk: Omit<Perk, 'id' | 'created_at' | 'updated_at'>): Promise<Perk> {
+    // Get the current session to ensure we're authenticated
+    const session = await supabase.auth.getSession();
+    console.log('Current session:', session);
+    
+    if (!session.data.session) {
+      throw new Error('No authenticated session found. Make sure you are logged in as an admin.');
+    }
+
     const { data, error } = await supabase
       .from('perks')
       .insert([
@@ -54,6 +62,13 @@ export const PerksService = {
   },
 
   async updatePerk(id: string, updates: Partial<Perk>): Promise<void> {
+    // Get the current session to ensure we're authenticated
+    const session = await supabase.auth.getSession();
+    
+    if (!session.data.session) {
+      throw new Error('No authenticated session found. Make sure you are logged in as an admin.');
+    }
+    
     const { error } = await supabase
       .from('perks')
       .update({
@@ -71,6 +86,13 @@ export const PerksService = {
   },
 
   async deletePerk(id: string): Promise<void> {
+    // Get the current session to ensure we're authenticated
+    const session = await supabase.auth.getSession();
+    
+    if (!session.data.session) {
+      throw new Error('No authenticated session found. Make sure you are logged in as an admin.');
+    }
+    
     const { error } = await supabase
       .from('perks')
       .delete()
@@ -83,6 +105,13 @@ export const PerksService = {
   },
 
   async togglePerkActive(id: string, isActive: boolean): Promise<void> {
+    // Get the current session to ensure we're authenticated
+    const session = await supabase.auth.getSession();
+    
+    if (!session.data.session) {
+      throw new Error('No authenticated session found. Make sure you are logged in as an admin.');
+    }
+    
     const { error } = await supabase
       .from('perks')
       .update({ is_active: isActive, updated_at: new Date().toISOString() })

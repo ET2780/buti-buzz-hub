@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Perk } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash, Save, X } from 'lucide-react';
+import { Plus, Trash, Save, X, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -12,9 +11,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { PerksService } from '@/services/PerksService';
 import { useAuth } from '@/hooks/useAuth';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface PerksManagementProps {
   isOpen: boolean;
@@ -27,11 +28,12 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
   onClose,
   onPerksUpdated
 }) => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [perks, setPerks] = useState<Perk[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [newPerk, setNewPerk] = useState<Partial<Perk>>({
     title: '',
     description: '',
@@ -47,11 +49,13 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
   const loadPerks = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       const fetchedPerks = await PerksService.getPerks();
       setPerks(fetchedPerks);
     } catch (error) {
       console.error('Failed to load perks:', error);
       toast.error('Failed to load perks');
+      setError('Failed to load perks. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -65,6 +69,11 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
 
     try {
       setIsSubmitting(true);
+      setError(null);
+      
+      // Log the current auth state before adding
+      console.log('Current auth state:', { isAdmin, user });
+      
       const createdPerk = await PerksService.createPerk({
         title: newPerk.title,
         description: newPerk.description,
@@ -75,9 +84,11 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
       setNewPerk({ title: '', description: '', is_active: true });
       toast.success('ההטבה נוספה בהצלחה');
       onPerksUpdated(); // Notify parent to refresh perks
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to add perk:', error);
-      toast.error('Failed to add perk');
+      const errorMessage = error.message || 'Failed to add perk';
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -97,6 +108,7 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
 
     try {
       setIsSubmitting(true);
+      setError(null);
       await PerksService.updatePerk(id, {
         title: perkToUpdate.title,
         description: perkToUpdate.description,
@@ -106,9 +118,11 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
       setIsEditing(null);
       toast.success('ההטבה עודכנה בהצלחה');
       onPerksUpdated(); // Notify parent to refresh perks
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update perk:', error);
-      toast.error('Failed to update perk');
+      const errorMessage = error.message || 'Failed to update perk';
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -117,6 +131,7 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
   const handleToggleActive = async (id: string, currentState: boolean) => {
     try {
       setIsSubmitting(true);
+      setError(null);
       await PerksService.togglePerkActive(id, !currentState);
       
       setPerks(
@@ -127,9 +142,11 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
       
       toast.success(currentState ? 'ההטבה הושבתה' : 'ההטבה הופעלה');
       onPerksUpdated(); // Notify parent to refresh perks
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to toggle perk state:', error);
-      toast.error('Failed to update perk');
+       const errorMessage = error.message || 'Failed to toggle perk state';
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -140,14 +157,17 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
     
     try {
       setIsSubmitting(true);
+      setError(null);
       await PerksService.deletePerk(id);
       
       setPerks(perks.filter((perk) => perk.id !== id));
       toast.success('ההטבה נמחקה בהצלחה');
       onPerksUpdated(); // Notify parent to refresh perks
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete perk:', error);
-      toast.error('Failed to delete perk');
+      const errorMessage = error.message || 'Failed to delete perk';
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -169,6 +189,15 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
           <DialogTitle className="flex items-center gap-2">
             ניהול הטבות היום
           </DialogTitle>
+          {error && (
+            <DialogDescription>
+              <Alert variant="destructive" className="mt-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>שגיאה</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto">

@@ -1,121 +1,173 @@
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Sidebar from '@/components/Sidebar';
-import ChatFeed from '@/components/ChatFeed';
+import React, { useState, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
+import { useAuth } from '@/hooks/useAuth';
 import { User, Message, Perk } from '@/types';
-import SongSuggestionModal from '@/components/SongSuggestionModal';
+import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/integrations/supabase/client';
+import Sidebar from '@/components/Sidebar';
+import SongModal from '@/components/SongModal';
 import ProfileModal from '@/components/ProfileModal';
 import PerksManagement from '@/components/PerksManagement';
-import AuthGuard from '@/components/AuthGuard';
-import { useAuth } from '@/hooks/useAuth';
-import { PerksService } from '@/services/PerksService';
-import { toast } from 'sonner';
+import Chat from '@/components/Chat';
 
 const ChatPage = () => {
-  const { user, isAdmin } = useAuth();
-  const [showSongModal, setShowSongModal] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showPerksModal, setShowPerksModal] = useState(false);
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [socket, setSocket] = useState<any>(null);
+  const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
+  const [activeChatUsers, setActiveChatUsers] = useState<User[]>([]);
+  const [isSongModalOpen, setIsSongModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isPerksModalOpen, setIsPerksModalOpen] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const [activePerks, setActivePerks] = useState<Perk[]>([]);
   const [isLoadingPerks, setIsLoadingPerks] = useState(true);
-  
-  // Demo messages
-  const initialMessages: Message[] = [
-    {
-      id: "1",
-      sender: { name: "אודי", avatar: "🧑", isAdmin: true, id: "admin-1" },
-      text: "ברוכים הבאים לצ'אט של קפה BUTI! מי מגיע היום?",
-      timestamp: new Date(Date.now() - 60 * 60000),
-      isCurrentUser: false
-    },
-    {
-      id: "2",
-      sender: { name: "דנה", avatar: "👩", isAdmin: false, id: "user-1" },
-      text: "אני אהיה שם בסביבות 14:00, מישהו מצטרף?",
-      timestamp: new Date(Date.now() - 45 * 60000),
-      isCurrentUser: false
-    }
-  ];
-  
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [activeUsers, setActiveUsers] = useState(4);
+
+  const openSongModal = () => setIsSongModalOpen(true);
+  const closeSongModal = () => setIsSongModalOpen(false);
+
+  const openProfileModal = () => setIsProfileModalOpen(true);
+  const closeProfileModal = () => setIsProfileModalOpen(false);
+
+  const openPerksModal = () => setIsPerksModalOpen(true);
+  const closePerksModal = () => setIsPerksModalOpen(false);
 
   useEffect(() => {
-    fetchActivePerks();
-  }, []);
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
-  const fetchActivePerks = async () => {
+  useEffect(() => {
+    if (!user) return;
+
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL as string, {
+      query: { userId: user.id },
+      transports: ['websocket', 'polling'],
+    });
+
+    setSocket(newSocket);
+
+    newSocket.on('connect', () => {
+      console.log('Connected to WebSocket');
+    });
+
+    newSocket.on('users', (users: User[]) => {
+      setOnlineUsers(users);
+      const activeUsers = [user, ...users];
+      setActiveChatUsers(activeUsers);
+    });
+
+    newSocket.on('message', (message: Message) => {
+      setMessages((prevMessages) => [...prevMessages, message]);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from WebSocket');
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [user]);
+
+  const sendMessage = () => {
+    if (newMessage.trim() && user) {
+      const message: Message = {
+        id: uuidv4(),
+        sender: user,
+        text: newMessage,
+        timestamp: new Date(),
+        isCurrentUser: true,
+      };
+      socket.emit('message', message);
+      setMessages((prevMessages) => [...prevMessages, message]);
+      setNewMessage('');
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      sendMessage();
+    }
+  };
+
+  // Function to load active perks
+  const loadActivePerks = async () => {
     try {
       setIsLoadingPerks(true);
       const perks = await PerksService.getActivePerks();
       setActivePerks(perks);
     } catch (error) {
-      console.error('Failed to fetch active perks:', error);
-      toast.error('Failed to load perks');
+      console.error('Error loading active perks:', error);
     } finally {
       setIsLoadingPerks(false);
     }
   };
 
-  const handlePerksUpdated = async () => {
-    await fetchActivePerks();
-  };
-
-  const handleSongSubmit = (songName: string) => {
-    toast.success(`תודה על ההצעה! השיר "${songName}" נשלח לצוות BUTI`);
-  };
+  // Load perks on mount
+  useEffect(() => {
+    loadActivePerks();
+    
+    // Set up real-time subscription to perks table
+    const channel = supabase
+      .channel('public:perks')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'perks' },
+        (payload) => {
+          console.log('Perks changed:', payload);
+          loadActivePerks(); // Reload perks when any change occurs
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
-    <AuthGuard>
-      <div className="flex h-screen">
-        <Sidebar 
-          onOpenSongModal={() => setShowSongModal(true)}
-          onOpenProfileModal={() => setShowProfileModal(true)}
-          onOpenPerksModal={isAdmin ? () => setShowPerksModal(true) : undefined}
-          activeUsersCount={activeUsers}
-          activePerks={activePerks}
-          isLoadingPerks={isLoadingPerks}
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar
+        onOpenSongModal={openSongModal}
+        onOpenProfileModal={openProfileModal}
+        onOpenPerksModal={openPerksModal}
+        activeUsersCount={activeChatUsers.length - 1}
+        activePerks={activePerks}
+        isLoadingPerks={isLoadingPerks}
+      />
+      
+      <Chat
+        messages={messages}
+        newMessage={newMessage}
+        handleInputChange={handleInputChange}
+        handleKeyDown={handleKeyDown}
+        sendMessage={sendMessage}
+        chatContainerRef={chatContainerRef}
+      />
+      
+      {isSongModalOpen && (
+        <SongModal isOpen={isSongModalOpen} onClose={closeSongModal} />
+      )}
+      
+      {isProfileModalOpen && (
+        <ProfileModal isOpen={isProfileModalOpen} onClose={closeProfileModal} />
+      )}
+      
+      {isPerksModalOpen && (
+        <PerksManagement
+          isOpen={isPerksModalOpen}
+          onClose={closePerksModal}
+          onPerksUpdated={loadActivePerks}
         />
-        
-        <div className="flex-1 flex flex-col">
-          <ChatFeed 
-            messages={messages}
-            onSendMessage={(text) => {
-              if (user) {
-                const newMessage: Message = {
-                  id: Date.now().toString(),
-                  sender: user,
-                  text,
-                  timestamp: new Date(),
-                  isCurrentUser: true
-                };
-                setMessages([...messages, newMessage]);
-              }
-            }}
-          />
-        </div>
-        
-        <SongSuggestionModal 
-          isOpen={showSongModal}
-          onClose={() => setShowSongModal(false)}
-          onSubmit={handleSongSubmit}
-        />
-        
-        <ProfileModal 
-          isOpen={showProfileModal}
-          onClose={() => setShowProfileModal(false)}
-        />
-        
-        {isAdmin && (
-          <PerksManagement 
-            isOpen={showPerksModal}
-            onClose={() => setShowPerksModal(false)}
-            onPerksUpdated={handlePerksUpdated}
-          />
-        )}
-      </div>
-    </AuthGuard>
+      )}
+    </div>
   );
 };
 
