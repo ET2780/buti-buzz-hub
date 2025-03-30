@@ -11,6 +11,7 @@ import ProfileModal from '@/components/ProfileModal';
 import PerksManagement from '@/components/PerksManagement';
 import Chat from '@/components/Chat';
 import { PerksService } from '@/services/PerksService';
+import { toast } from '@/components/ui/use-toast';
 
 // Define a fallback socket URL if the environment variable is not available
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
@@ -28,6 +29,7 @@ const ChatPage = () => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [activePerks, setActivePerks] = useState<Perk[]>([]);
   const [isLoadingPerks, setIsLoadingPerks] = useState(true);
+  const socketRef = useRef<any>(null);
 
   const openSongModal = () => setIsSongModalOpen(true);
   const closeSongModal = () => setIsSongModalOpen(false);
@@ -44,41 +46,105 @@ const ChatPage = () => {
     }
   }, [messages]);
 
+  // Initialize socket connection when user is available
   useEffect(() => {
     if (!user) return;
 
+    // Clean up previous socket if it exists
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+
+    console.log(`Connecting to socket at ${SOCKET_URL} with user:`, user);
+    
+    // Create new socket connection with user info
     const newSocket = io(SOCKET_URL, {
-      query: { userId: user.id },
+      query: { 
+        userId: user.id,
+        userName: user.name,
+        userAvatar: user.avatar,
+        isAdmin: user.isAdmin ? 'true' : 'false'
+      },
       transports: ['websocket', 'polling'],
     });
 
+    socketRef.current = newSocket;
     setSocket(newSocket);
 
+    // Socket event handlers
     newSocket.on('connect', () => {
-      console.log('Connected to WebSocket');
+      console.log('Connected to WebSocket server');
+      toast({
+        title: "מחובר לצ'אט",
+        description: "התחברת בהצלחה לצ'אט BUTI",
+      });
+    });
+
+    newSocket.on('connect_error', (error: any) => {
+      console.error('Socket connection error:', error);
+      toast({
+        title: "שגיאת התחברות",
+        description: "לא הצלחנו להתחבר לשרת הצ'אט. נסה שוב מאוחר יותר.",
+        variant: "destructive"
+      });
     });
 
     newSocket.on('users', (users: User[]) => {
+      console.log('Received online users:', users);
       setOnlineUsers(users);
-      const activeUsers = [user, ...users];
+      
+      // Add current user to active users if not already included
+      const hasCurrentUser = users.some(u => u.id === user.id);
+      const activeUsers = hasCurrentUser ? users : [user, ...users];
       setActiveChatUsers(activeUsers);
     });
 
+    // Handle receiving messages from server
     newSocket.on('message', (message: Message) => {
-      setMessages((prevMessages) => [...prevMessages, message]);
+      console.log('Received message:', message);
+      setMessages((prevMessages) => {
+        // Check if message is already in the list to avoid duplicates
+        const isDuplicate = prevMessages.some(m => m.id === message.id);
+        if (isDuplicate) {
+          return prevMessages;
+        }
+        
+        // Add isCurrentUser flag based on sender ID
+        const messageWithFlag = {
+          ...message,
+          isCurrentUser: message.sender.id === user.id
+        };
+        return [...prevMessages, messageWithFlag];
+      });
+    });
+
+    // Handle receiving previous messages when joining
+    newSocket.on('previous_messages', (previousMessages: Message[]) => {
+      console.log('Received previous messages:', previousMessages);
+      if (Array.isArray(previousMessages) && previousMessages.length > 0) {
+        setMessages(previousMessages.map(msg => ({
+          ...msg,
+          isCurrentUser: msg.sender.id === user.id
+        })));
+      }
     });
 
     newSocket.on('disconnect', () => {
-      console.log('Disconnected from WebSocket');
+      console.log('Disconnected from WebSocket server');
     });
 
+    // Clean up socket connection on component unmount
     return () => {
-      newSocket.disconnect();
+      console.log('Cleaning up socket connection');
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
   }, [user]);
 
   const sendMessage = () => {
-    if (newMessage.trim() && user) {
+    if (newMessage.trim() && user && socket) {
       const message: Message = {
         id: uuidv4(),
         sender: user,
@@ -86,7 +152,11 @@ const ChatPage = () => {
         timestamp: new Date(),
         isCurrentUser: true,
       };
+      
+      console.log('Sending message:', message);
       socket.emit('message', message);
+      
+      // Add message to local state
       setMessages((prevMessages) => [...prevMessages, message]);
       setNewMessage('');
     }

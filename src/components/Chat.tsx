@@ -1,6 +1,10 @@
 
 import React from 'react';
 import { Message } from '@/types';
+import { Send } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import ButiAvatar from './ButiAvatar';
 
 interface ChatProps {
   messages: Message[];
@@ -19,6 +23,13 @@ const Chat: React.FC<ChatProps> = ({
   sendMessage,
   chatContainerRef
 }) => {
+  const formatTime = (date: Date) => {
+    return new Date(date).toLocaleTimeString('he-IL', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full">
       <div className="p-4 border-b border-gray-200">
@@ -42,23 +53,36 @@ const Chat: React.FC<ChatProps> = ({
                   message.isCurrentUser ? 'justify-end' : 'justify-start'
                 }`}
               >
-                <div
-                  className={`max-w-[70%] rounded-lg p-3 ${
-                    message.isCurrentUser
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium">{message.sender.name}</span>
-                    <span className="text-xs opacity-70">
-                      {new Date(message.timestamp).toLocaleTimeString('he-IL', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
+                {!message.isCurrentUser && (
+                  <div className="flex-shrink-0 mr-2">
+                    <ButiAvatar
+                      avatar={message.sender.avatar}
+                      name={message.sender.name}
+                      isAdmin={message.sender.isAdmin}
+                      size="sm"
+                    />
                   </div>
-                  <p>{message.text}</p>
+                )}
+                
+                <div className="max-w-[70%]">
+                  {!message.isCurrentUser && (
+                    <div className="text-xs text-muted-foreground mb-1 font-medium">
+                      {message.sender.name}
+                    </div>
+                  )}
+                  
+                  <div
+                    className={`rounded-lg p-3 ${
+                      message.isCurrentUser
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    }`}
+                  >
+                    <p>{message.text}</p>
+                    <div className="text-xs opacity-70 text-right mt-1">
+                      {formatTime(message.timestamp)}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -68,21 +92,22 @@ const Chat: React.FC<ChatProps> = ({
       
       <div className="p-4 border-t border-gray-200">
         <div className="flex items-center gap-2">
-          <input
+          <Input
             type="text"
             value={newMessage}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="הקלידו הודעה..."
-            className="flex-1 px-4 py-2 rounded-full border focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 rounded-full"
           />
-          <button
+          <Button
             onClick={sendMessage}
             disabled={!newMessage.trim()}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-full disabled:opacity-50"
+            className="rounded-full"
+            size="icon"
           >
-            שלח
-          </button>
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
