@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Mail, Coffee } from 'lucide-react';
+import { Mail, Coffee, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -9,11 +9,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 interface LoginFormProps {
   onLoginWithGoogle: () => void;
   onLoginWithEmail: (email: string) => void;
+  onLoginAsGuest: () => void;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ 
   onLoginWithGoogle, 
-  onLoginWithEmail, 
+  onLoginWithEmail,
+  onLoginAsGuest,
 }) => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -63,6 +65,15 @@ const LoginForm: React.FC<LoginFormProps> = ({
             </g>
           </svg>
           המשך עם גוגל
+        </Button>
+
+        <Button 
+          variant="secondary"
+          className="w-full flex items-center gap-2 justify-center"
+          onClick={onLoginAsGuest}
+        >
+          <User size={16} />
+          כניסה כאורח/ת
         </Button>
 
         <div className="relative">

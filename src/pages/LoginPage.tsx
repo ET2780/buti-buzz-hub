@@ -53,6 +53,35 @@ const LoginPage = () => {
     }, 3000);
   };
 
+  const handleLoginAsGuest = () => {
+    // Create a guest user
+    const guestName = `אורח/ת ${Math.floor(Math.random() * 1000)}`;
+    
+    toast.success(`ברוך הבא, ${guestName}!`, {
+      description: "מתחבר/ת כאורח/ת..."
+    });
+
+    // Store guest info in localStorage for demo purposes
+    localStorage.setItem('tempMockEmail', `guest_${Date.now()}@buti.cafe`);
+    localStorage.setItem('tempMockIsStaff', 'false');
+    localStorage.setItem('tempMockGuestName', guestName);
+    
+    // Show BUTI logo after login before navigating
+    const loadingContainer = document.createElement('div');
+    loadingContainer.className = 'fixed inset-0 bg-white flex items-center justify-center z-50';
+    
+    const logoElement = document.createElement('div');
+    logoElement.className = 'animate-pulse';
+    loadingContainer.appendChild(logoElement);
+    
+    document.body.appendChild(loadingContainer);
+
+    setTimeout(() => {
+      document.body.removeChild(loadingContainer);
+      navigate('/buti');
+    }, 1500);
+  };
+
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
@@ -68,6 +97,7 @@ const LoginPage = () => {
           <LoginForm 
             onLoginWithGoogle={handleLoginWithGoogle}
             onLoginWithEmail={handleLoginWithEmail}
+            onLoginAsGuest={handleLoginAsGuest}
           />
         </div>
       </main>

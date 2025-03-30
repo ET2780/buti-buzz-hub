@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@/types';
+import { User, UserWithRole } from '@/types';
 import { Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
@@ -25,6 +25,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Check for demo login from localStorage
+    const checkDemoLogin = () => {
+      const mockEmail = localStorage.getItem('tempMockEmail');
+      const mockIsStaff = localStorage.getItem('tempMockIsStaff') === 'true';
+      const mockGuestName = localStorage.getItem('tempMockGuestName');
+      
+      if (mockEmail) {
+        const mockUser: User = {
+          id: mockEmail,
+          name: mockGuestName || (mockEmail.includes('guest') ? `אורח/ת ${Math.floor(Math.random() * 1000)}` : mockEmail.split('@')[0]),
+          avatar: '😊',
+          isAdmin: mockIsStaff
+        };
+        
+        setUser(mockUser);
+        setIsAdmin(mockIsStaff);
+        setIsLoading(false);
+        return true;
+      }
+      
+      return false;
+    };
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
@@ -33,8 +56,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (newSession?.user) {
           await fetchUserProfile(newSession.user.id);
         } else {
-          setUser(null);
-          setIsAdmin(false);
+          // Check for demo login if no supabase session
+          if (!checkDemoLogin()) {
+            setUser(null);
+            setIsAdmin(false);
+          }
         }
       }
     );
@@ -46,8 +72,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (initialSession?.user) {
         await fetchUserProfile(initialSession.user.id);
+      } else {
+        // Check for demo login if no supabase session
+        if (!checkDemoLogin()) {
+          setIsLoading(false);
+        }
       }
-      setIsLoading(false);
     };
 
     initializeAuth();
@@ -75,9 +105,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('user_id', userId)
         .single();
 
-      if (roleError) throw roleError;
+      if (roleError && roleError.code !== 'PGRST116') throw roleError; // PGRST116 is "no rows returned"
 
-      const isUserAdmin = roleData.role === 'admin';
+      const isUserAdmin = roleData?.role === 'admin';
       
       setUser({
         id: profileData.id,
@@ -87,10 +117,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       setIsAdmin(isUserAdmin);
+      setIsLoading(false);
     } catch (error) {
       console.error('Error fetching profile:', error);
       setUser(null);
       setIsAdmin(false);
+      setIsLoading(false);
     }
   };
 
@@ -125,8 +157,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      // Clear any local storage items for demo login
+      localStorage.removeItem('tempMockEmail');
+      localStorage.removeItem('tempMockIsStaff');
+      localStorage.removeItem('tempMockGuestName');
+      
+      // If we have a real session, sign out from supabase
+      if (session) {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+      }
+      
+      setUser(null);
+      setIsAdmin(false);
       toast.success('Signed out successfully');
     } catch (error: any) {
       toast.error(error.message || 'Sign out failed');
@@ -135,7 +178,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProfile = async (updates: Partial<User>) => {
     try {
-      if (!session?.user) throw new Error('No user logged in');
+      if (!session?.user && !user?.id) throw new Error('No user logged in');
+      
+      // For demo users, just update the local state
+      if (!session?.user && user?.id) {
+        setUser({ ...user, ...updates });
+        toast.success('Profile updated successfully');
+        return;
+      }
+      
+      const userId = session?.user.id;
       
       const { error } = await supabase
         .from('profiles')
@@ -144,7 +196,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           avatar: updates.avatar,
           updated_at: new Date().toISOString()
         })
-        .eq('id', session.user.id);
+        .eq('id', userId);
       
       if (error) throw error;
       
