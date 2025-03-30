@@ -58,8 +58,20 @@ const LoginPage = () => {
         }));
       }
       
-      // Navigate to main app
-      navigate('/buti');
+      // Show BUTI logo after login before navigating
+      const loadingContainer = document.createElement('div');
+      loadingContainer.className = 'fixed inset-0 bg-white flex items-center justify-center z-50';
+      
+      const logoElement = document.createElement('div');
+      logoElement.className = 'animate-pulse';
+      loadingContainer.appendChild(logoElement);
+      
+      document.body.appendChild(loadingContainer);
+
+      setTimeout(() => {
+        document.body.removeChild(loadingContainer);
+        navigate('/buti');
+      }, 1500);
     }, 3000);
   };
 
@@ -88,3 +100,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
