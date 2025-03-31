@@ -18,7 +18,6 @@ const ChatPage = () => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [activePerks, setActivePerks] = React.useState([]);
   const [isLoadingPerks, setIsLoadingPerks] = React.useState(true);
-  const [activeChatUsers, setActiveChatUsers] = React.useState([]);
 
   // Chat functionality using our custom hook
   const {
@@ -27,6 +26,7 @@ const ChatPage = () => {
     isLoading: isLoadingChat,
     connectionError,
     isSending,
+    activeChatUsers, // Now using the activeChatUsers from the hook
     handleInputChange,
     handleKeyDown,
     sendMessage
@@ -91,13 +91,18 @@ const ChatPage = () => {
     };
   }, []);
 
+  // Calculate active users count (excluding current user)
+  const activeUsersCount = activeChatUsers.length > 0 
+    ? activeChatUsers.filter(chatUser => chatUser.id !== user?.id).length 
+    : 0;
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
         onOpenSongModal={openSongModal}
         onOpenProfileModal={openProfileModal}
         onOpenPerksModal={openPerksModal}
-        activeUsersCount={activeChatUsers.length > 0 ? activeChatUsers.length - 1 : 0}
+        activeUsersCount={activeUsersCount}
         activePerks={activePerks}
         isLoadingPerks={isLoadingPerks}
       />

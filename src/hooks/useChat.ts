@@ -13,12 +13,130 @@ export const useChat = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [activeChatUsers, setActiveChatUsers] = useState<User[]>([]);
   const fetchAttempts = useRef(0);
+  const supabaseChannel = useRef<any>(null);
   
-  // Load initial messages
+  // Set up real-time subscription for new messages and user presence
   useEffect(() => {
     if (!user) return;
     
+    const setupRealtimeSubscription = () => {
+      // Create a channel for chat events
+      const channel = supabase
+        .channel('public:messages')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages' },
+          async (payload) => {
+            console.log('New message received:', payload);
+            
+            try {
+              const messageData = payload.new;
+              
+              // Skip message processing if this is a message we just sent
+              // This prevents duplicate messages in the UI
+              if (messageData.sender_id === user.id && isSending) {
+                console.log('Skipping own message during send operation');
+                return;
+              }
+              
+              // Fetch the sender details
+              const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('name, avatar')
+                .eq('id', messageData.sender_id)
+                .maybeSingle();
+                
+              if (profileError) throw profileError;
+              
+              // Fetch if user is admin
+              const { data: roleData, error: roleError } = await supabase
+                .from('user_roles')
+                .select('role')
+                .eq('user_id', messageData.sender_id);
+                
+              const isAdmin = roleData && roleData.some((r: any) => r.role === 'admin') || false;
+              
+              const newMessage: Message = {
+                id: messageData.id,
+                text: messageData.text,
+                timestamp: new Date(messageData.created_at),
+                isCurrentUser: messageData.sender_id === user.id,
+                sender: {
+                  id: messageData.sender_id,
+                  name: profile ? profile.name : 'Unknown User',
+                  avatar: profile ? profile.avatar : '😊',
+                  isAdmin: isAdmin
+                }
+              };
+              
+              setMessages((prev) => [...prev, newMessage]);
+            } catch (error) {
+              console.error('Error processing new message:', error);
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('Subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('Successfully subscribed to messages!');
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('Error subscribing to messages');
+            setConnectionError('Failed to connect to chat. Please try refreshing the page.');
+          }
+        });
+        
+      supabaseChannel.current = channel;
+      
+      // Also set up presence channel for active users
+      setupUserPresence();
+    };
+    
+    // Set up user presence tracking
+    const setupUserPresence = () => {
+      if (!user) return;
+      
+      const presenceChannel = supabase.channel('online-users', {
+        config: {
+          presence: {
+            key: user.id,
+          },
+        },
+      });
+      
+      // Track user's own presence
+      presenceChannel
+        .on('presence', { event: 'sync' }, () => {
+          const state = presenceChannel.presenceState();
+          const activeUsers = Object.keys(state).map(userId => {
+            const userInfo = state[userId][0] as any;
+            return {
+              id: userId,
+              name: userInfo.user_name || 'Unknown User',
+              avatar: userInfo.avatar || '😊',
+              isAdmin: userInfo.is_admin || false,
+            };
+          });
+          
+          setActiveChatUsers(activeUsers);
+          console.log('Active users updated:', activeUsers);
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            // When subscribed, broadcast presence
+            await presenceChannel.track({
+              user_id: user.id,
+              user_name: user.name,
+              avatar: user.avatar,
+              is_admin: user.isAdmin,
+              online_at: new Date().toISOString(),
+            });
+          }
+        });
+    };
+    
+    // Load initial messages
     const fetchMessages = async () => {
       setIsLoading(true);
       setConnectionError(null);
@@ -102,70 +220,15 @@ export const useChat = () => {
     };
     
     fetchMessages();
-    
-    // Set up real-time subscription for new messages
-    const channel = supabase
-      .channel('public:messages')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        async (payload) => {
-          console.log('New message received:', payload);
-          
-          try {
-            const messageData = payload.new;
-            
-            // Fetch the sender details
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('name, avatar')
-              .eq('id', messageData.sender_id)
-              .single();
-              
-            if (profileError) throw profileError;
-            
-            // Fetch if user is admin
-            const { data: roleData, error: roleError } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', messageData.sender_id);
-              
-            const isAdmin = roleData && roleData.some((r: any) => r.role === 'admin') || false;
-            
-            const newMessage: Message = {
-              id: messageData.id,
-              text: messageData.text,
-              timestamp: new Date(messageData.created_at),
-              isCurrentUser: messageData.sender_id === user.id,
-              sender: {
-                id: messageData.sender_id,
-                name: profile ? profile.name : 'Unknown User',
-                avatar: profile ? profile.avatar : '😊',
-                isAdmin: isAdmin
-              }
-            };
-            
-            setMessages((prev) => [...prev, newMessage]);
-          } catch (error) {
-            console.error('Error processing new message:', error);
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to messages!');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error subscribing to messages');
-          setConnectionError('Failed to connect to chat. Please try refreshing the page.');
-        }
-      });
+    setupRealtimeSubscription();
     
     // Clean up subscription
     return () => {
-      supabase.removeChannel(channel);
+      if (supabaseChannel.current) {
+        supabase.removeChannel(supabaseChannel.current);
+      }
     };
-  }, [user]);
+  }, [user, isSending]);
   
   const sendMessage = async () => {
     if (!user || !newMessage.trim() || isSending) return;
@@ -251,6 +314,7 @@ export const useChat = () => {
     isLoading,
     connectionError,
     isSending,
+    activeChatUsers,
     handleInputChange,
     handleKeyDown,
     sendMessage
