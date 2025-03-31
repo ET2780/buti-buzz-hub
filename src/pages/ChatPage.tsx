@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Sidebar from '@/components/Sidebar';
@@ -59,8 +58,8 @@ const ChatPage = () => {
           
         if (error) throw error;
         
-        // Check if data exists and has the text property before accessing it
-        if (data && typeof data === 'object' && 'text' in data && typeof data.text === 'string') {
+        // Add additional null check for data
+        if (data !== null && typeof data === 'object' && 'text' in data && typeof data.text === 'string') {
           setPinnedMessage(data.text);
         }
       } catch (error) {
