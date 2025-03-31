@@ -22,39 +22,56 @@ export const useChat = () => {
       setConnectionError(null);
       
       try {
-        const { data, error } = await supabase
+        // First, fetch all messages
+        const { data: messagesData, error: messagesError } = await supabase
           .from('messages')
-          .select(`
-            id,
-            text,
-            created_at,
-            sender_id,
-            profiles:sender_id (
-              name,
-              avatar,
-              id
-            ),
-            user_roles:sender_id (
-              role
-            )
-          `)
+          .select('id, text, created_at, sender_id')
           .order('created_at', { ascending: true });
         
-        if (error) throw error;
+        if (messagesError) throw messagesError;
+        
+        // Then, fetch all profiles to match with sender_ids
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, name, avatar');
+          
+        if (profilesError) throw profilesError;
+        
+        // Also fetch roles to determine admin status
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
+          
+        if (rolesError) throw rolesError;
+        
+        // Create a map of profiles for quick lookup
+        const profilesMap = profilesData.reduce((acc: Record<string, any>, profile: any) => {
+          acc[profile.id] = profile;
+          return acc;
+        }, {});
+        
+        // Create a map of admin roles
+        const adminMap: Record<string, boolean> = {};
+        rolesData.forEach((roleData: any) => {
+          if (roleData.role === 'admin') {
+            adminMap[roleData.user_id] = true;
+          }
+        });
         
         // Transform the data to match our Message type
-        const formattedMessages = data.map((item: any): Message => {
-          const isAdmin = item.user_roles?.some((r: any) => r.role === 'admin') || false;
+        const formattedMessages = messagesData.map((message: any): Message => {
+          const profile = profilesMap[message.sender_id] || {};
+          const isAdmin = adminMap[message.sender_id] || false;
           
           return {
-            id: item.id,
-            text: item.text,
-            timestamp: new Date(item.created_at),
-            isCurrentUser: item.sender_id === user.id,
+            id: message.id,
+            text: message.text,
+            timestamp: new Date(message.created_at),
+            isCurrentUser: message.sender_id === user.id,
             sender: {
-              id: item.sender_id,
-              name: item.profiles?.name || 'Unknown User',
-              avatar: item.profiles?.avatar || '😊',
+              id: message.sender_id,
+              name: profile.name || 'Unknown User',
+              avatar: profile.avatar || '😊',
               isAdmin: isAdmin
             }
           };
@@ -81,47 +98,43 @@ export const useChat = () => {
         async (payload) => {
           console.log('New message received:', payload);
           
-          // Fetch the complete message with sender details
-          const { data, error } = await supabase
-            .from('messages')
-            .select(`
-              id,
-              text,
-              created_at,
-              sender_id,
-              profiles:sender_id (
-                name,
-                avatar,
-                id
-              ),
-              user_roles:sender_id (
-                role
-              )
-            `)
-            .eq('id', payload.new.id)
-            .single();
+          try {
+            const messageData = payload.new;
             
-          if (error) {
-            console.error('Error fetching new message details:', error);
-            return;
+            // Fetch the sender details
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('name, avatar')
+              .eq('id', messageData.sender_id)
+              .single();
+              
+            if (profileError) throw profileError;
+            
+            // Fetch if user is admin
+            const { data: roleData, error: roleError } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', messageData.sender_id);
+              
+            const isAdmin = roleData?.some((r: any) => r.role === 'admin') || false;
+            
+            const newMessage: Message = {
+              id: messageData.id,
+              text: messageData.text,
+              timestamp: new Date(messageData.created_at),
+              isCurrentUser: messageData.sender_id === user.id,
+              sender: {
+                id: messageData.sender_id,
+                name: profile?.name || 'Unknown User',
+                avatar: profile?.avatar || '😊',
+                isAdmin: isAdmin
+              }
+            };
+            
+            setMessages((prev) => [...prev, newMessage]);
+          } catch (error) {
+            console.error('Error processing new message:', error);
           }
-          
-          const isAdmin = data.user_roles?.some((r: any) => r.role === 'admin') || false;
-          
-          const newMessage: Message = {
-            id: data.id,
-            text: data.text,
-            timestamp: new Date(data.created_at),
-            isCurrentUser: data.sender_id === user.id,
-            sender: {
-              id: data.sender_id,
-              name: data.profiles?.name || 'Unknown User',
-              avatar: data.profiles?.avatar || '😊',
-              isAdmin: isAdmin
-            }
-          };
-          
-          setMessages((prev) => [...prev, newMessage]);
         }
       )
       .subscribe();
