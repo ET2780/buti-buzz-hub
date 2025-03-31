@@ -175,11 +175,16 @@ export const useChat = () => {
     try {
       console.log("Sending message as user:", user.id);
       
+      // Make sure user.id is a valid UUID
+      if (!user.id || typeof user.id !== 'string' || user.id.length !== 36) {
+        throw new Error("Invalid user ID. Please try logging in again.");
+      }
+      
       const { error } = await supabase
         .from('messages')
         .insert({
           text: newMessage.trim(),
-          sender_id: user.id
+          sender_id: user.id // Ensure this is a valid UUID
         });
       
       if (error) {
