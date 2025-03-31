@@ -45,7 +45,7 @@ const ChatFeed: React.FC<ChatFeedProps> = ({ messages, onSendMessage }) => {
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.isCurrentUser ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${message.isCurrentUser ? "justify-end" : "justify-start"}`}
             >
               {!message.isCurrentUser && (
                 <div className="mr-2">
@@ -66,8 +66,8 @@ const ChatFeed: React.FC<ChatFeedProps> = ({ messages, onSendMessage }) => {
                 <div
                   className={`message-bubble ${
                     message.isCurrentUser
-                      ? 'message-bubble-mine'
-                      : 'message-bubble-others'
+                      ? "message-bubble-mine"
+                      : "message-bubble-others"
                   }`}
                 >
                   {message.text}

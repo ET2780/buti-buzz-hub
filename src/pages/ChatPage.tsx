@@ -1,37 +1,42 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
+
+import React, { useRef, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { User, Message, Perk } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '@/integrations/supabase/client';
 import Sidebar from '@/components/Sidebar';
 import SongModal from '@/components/SongModal';
 import ProfileModal from '@/components/ProfileModal';
 import PerksManagement from '@/components/PerksManagement';
 import Chat from '@/components/Chat';
 import { PerksService } from '@/services/PerksService';
-import { toast } from '@/components/ui/use-toast';
-import { SOCKET_URL } from '@/config/env';
-import { AlertCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useChat } from '@/hooks/useChat';
 
 const ChatPage = () => {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [socket, setSocket] = useState<any>(null);
-  const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
-  const [activeChatUsers, setActiveChatUsers] = useState<User[]>([]);
-  const [isSongModalOpen, setIsSongModalOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isPerksModalOpen, setIsPerksModalOpen] = useState(false);
+  const [isSongModalOpen, setIsSongModalOpen] = React.useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false);
+  const [isPerksModalOpen, setIsPerksModalOpen] = React.useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const [activePerks, setActivePerks] = useState<Perk[]>([]);
-  const [isLoadingPerks, setIsLoadingPerks] = useState(true);
-  const socketRef = useRef<any>(null);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const connectionAttempts = useRef(0);
-  const maxReconnectAttempts = 3;
+  const [activePerks, setActivePerks] = React.useState([]);
+  const [isLoadingPerks, setIsLoadingPerks] = React.useState(true);
+  const [activeChatUsers, setActiveChatUsers] = React.useState([]);
+
+  // Chat functionality using our custom hook
+  const {
+    messages,
+    newMessage,
+    isLoading: isLoadingChat,
+    connectionError,
+    handleInputChange,
+    handleKeyDown,
+    sendMessage
+  } = useChat();
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const openSongModal = () => setIsSongModalOpen(true);
   const closeSongModal = () => setIsSongModalOpen(false);
@@ -41,169 +46,6 @@ const ChatPage = () => {
 
   const openPerksModal = () => setIsPerksModalOpen(true);
   const closePerksModal = () => setIsPerksModalOpen(false);
-
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  // Initialize socket connection when user is available
-  useEffect(() => {
-    if (!user) return;
-
-    // Clean up previous socket if it exists
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-    }
-
-    setIsConnecting(true);
-    setConnectionError(null);
-    connectionAttempts.current = 0;
-    
-    const connectToSocket = () => {
-      console.log(`Connecting to socket at ${SOCKET_URL} with user:`, user);
-      connectionAttempts.current += 1;
-      
-      // Create new socket connection with user info
-      const newSocket = io(SOCKET_URL, {
-        query: { 
-          userId: user.id,
-          userName: user.name,
-          userAvatar: user.avatar,
-          isAdmin: user.isAdmin ? 'true' : 'false'
-        },
-        transports: ['websocket', 'polling'],
-        reconnectionAttempts: 3,
-        timeout: 10000, // 10 second timeout
-      });
-
-      socketRef.current = newSocket;
-      setSocket(newSocket);
-
-      // Socket event handlers
-      newSocket.on('connect', () => {
-        console.log('Connected to WebSocket server');
-        setIsConnecting(false);
-        setConnectionError(null);
-        toast({
-          title: "מחובר לצ'אט",
-          description: "התחברת בהצלחה לצ'אט BUTI",
-        });
-      });
-
-      newSocket.on('connect_error', (error: any) => {
-        console.error('Socket connection error:', error);
-        
-        if (connectionAttempts.current < maxReconnectAttempts) {
-          console.log(`Reconnect attempt ${connectionAttempts.current}/${maxReconnectAttempts}`);
-          // Will try to reconnect automatically through socket.io-client
-        } else {
-          setIsConnecting(false);
-          setConnectionError("לא ניתן להתחבר לשרת הצ'אט. תוכל להמשיך לגלוש באתר, אך הצ'אט לא יהיה זמין כעת.");
-          toast({
-            title: "שגיאת התחברות",
-            description: "לא הצלחנו להתחבר לשרת הצ'אט. ניתן להמשיך לגלוש באתר.",
-            variant: "destructive"
-          });
-        }
-      });
-
-      // Rest of the socket event handlers
-      newSocket.on('users', (users: User[]) => {
-        console.log('Received online users:', users);
-        setOnlineUsers(users);
-        
-        // Add current user to active users if not already included
-        const hasCurrentUser = users.some(u => u.id === user.id);
-        const activeUsers = hasCurrentUser ? users : [user, ...users];
-        setActiveChatUsers(activeUsers);
-      });
-
-      // Handle receiving messages from server
-      newSocket.on('message', (message: Message) => {
-        console.log('Received message:', message);
-        setMessages((prevMessages) => {
-          // Check if message is already in the list to avoid duplicates
-          const isDuplicate = prevMessages.some(m => m.id === message.id);
-          if (isDuplicate) {
-            return prevMessages;
-          }
-          
-          // Add isCurrentUser flag based on sender ID
-          const messageWithFlag = {
-            ...message,
-            isCurrentUser: message.sender.id === user.id
-          };
-          return [...prevMessages, messageWithFlag];
-        });
-      });
-
-      // Handle receiving previous messages when joining
-      newSocket.on('previous_messages', (previousMessages: Message[]) => {
-        console.log('Received previous messages:', previousMessages);
-        if (Array.isArray(previousMessages) && previousMessages.length > 0) {
-          setMessages(previousMessages.map(msg => ({
-            ...msg,
-            isCurrentUser: msg.sender.id === user.id
-          })));
-        }
-      });
-
-      newSocket.on('disconnect', () => {
-        console.log('Disconnected from WebSocket server');
-      });
-    };
-
-    connectToSocket();
-
-    // Clean up socket connection on component unmount
-    return () => {
-      console.log('Cleaning up socket connection');
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-    };
-  }, [user]);
-
-  const sendMessage = () => {
-    if (newMessage.trim() && user && socket) {
-      if (connectionError) {
-        toast({
-          title: "לא ניתן לשלוח הודעה",
-          description: "אין חיבור לשרת הצ'אט. נסה שוב מאוחר יותר.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      const message: Message = {
-        id: uuidv4(),
-        sender: user,
-        text: newMessage,
-        timestamp: new Date(),
-        isCurrentUser: true,
-      };
-      
-      console.log('Sending message:', message);
-      socket.emit('message', message);
-      
-      // Add message to local state
-      setMessages((prevMessages) => [...prevMessages, message]);
-      setNewMessage('');
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewMessage(e.target.value);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      sendMessage();
-    }
-  };
 
   // Function to load active perks
   const loadActivePerks = async () => {
@@ -254,7 +96,7 @@ const ChatPage = () => {
         onOpenSongModal={openSongModal}
         onOpenProfileModal={openProfileModal}
         onOpenPerksModal={openPerksModal}
-        activeUsersCount={activeChatUsers.length - 1}
+        activeUsersCount={activeChatUsers.length > 0 ? activeChatUsers.length - 1 : 0}
         activePerks={activePerks}
         isLoadingPerks={isLoadingPerks}
       />
@@ -267,7 +109,7 @@ const ChatPage = () => {
         sendMessage={sendMessage}
         chatContainerRef={chatContainerRef}
         connectionError={connectionError}
-        isConnecting={isConnecting}
+        isConnecting={isLoadingChat}
       />
       
       {isSongModalOpen && (

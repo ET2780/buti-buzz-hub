@@ -50,7 +50,7 @@ const Chat: React.FC<ChatProps> = ({
       
       {isConnecting && (
         <div className="text-center text-muted-foreground py-4 animate-pulse">
-          מתחבר לשרת הצ'אט...
+          טוען הודעות...
         </div>
       )}
       
@@ -61,8 +61,8 @@ const Chat: React.FC<ChatProps> = ({
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground py-10">
             {connectionError 
-              ? "שרת הצ'אט אינו זמין כרגע." 
-              : "אין הודעות עדיין. התחילו שיחה!"}
+              ? "לא ניתן לטעון הודעות כרגע." 
+              : isConnecting ? "טוען הודעות..." : "אין הודעות עדיין. התחילו שיחה!"}
           </div>
         ) : (
           <div className="space-y-4">
@@ -70,7 +70,7 @@ const Chat: React.FC<ChatProps> = ({
               <div
                 key={message.id}
                 className={`flex ${
-                  message.isCurrentUser ? 'justify-end' : 'justify-start'
+                  message.isCurrentUser ? "justify-end" : "justify-start"
                 }`}
               >
                 {!message.isCurrentUser && (
@@ -94,8 +94,8 @@ const Chat: React.FC<ChatProps> = ({
                   <div
                     className={`rounded-lg p-3 ${
                       message.isCurrentUser
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted"
                     }`}
                   >
                     <p>{message.text}</p>
