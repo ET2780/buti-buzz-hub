@@ -181,37 +181,15 @@ export const useChat = () => {
         throw new Error("Invalid user ID. Please try logging in again.");
       }
       
-      // For demo users (which don't exist in Supabase auth), we need to create a profile first
-      // Check if the profile exists by trying to fetch it
-      const { data: existingProfile, error: profileCheckError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      // If profile doesn't exist and we're in demo mode, create one
-      if (!existingProfile && !profileCheckError) {
-        console.log("Creating profile for demo user:", user.id);
-        const { error: createProfileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            name: user.name,
-            avatar: user.avatar
-          });
-          
-        if (createProfileError) {
-          console.error("Error creating profile:", createProfileError);
-          // Continue anyway since the messages table might not require a profile
-        }
-      }
+      // Ensure user profile exists in the database for demo users
+      await ensureUserProfileExists(user);
       
       // Now send the message
       const { error } = await supabase
         .from('messages')
         .insert({
           text: newMessage.trim(),
-          sender_id: user.id // Now guaranteed to be a valid UUID
+          sender_id: user.id
         });
       
       if (error) {
@@ -226,6 +204,34 @@ export const useChat = () => {
       toast.error(`Failed to send message: ${error.message || 'Unknown error'}`);
     } finally {
       setIsSending(false);
+    }
+  };
+  
+  // Helper function to ensure user profile exists
+  const ensureUserProfileExists = async (user: User) => {
+    try {
+      // Check if profile exists first
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      // If profile doesn't exist, create one
+      if (!existingProfile) {
+        console.log("Creating profile for user:", user.id);
+        await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            name: user.name,
+            avatar: user.avatar
+          });
+      }
+    } catch (error) {
+      console.error("Error checking/creating profile:", error);
+      // Continue anyway since we've removed the foreign key constraint
+      // This shouldn't block message sending
     }
   };
   

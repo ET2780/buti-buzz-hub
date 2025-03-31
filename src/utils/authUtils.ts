@@ -96,31 +96,21 @@ export const createAdminUser = async (name: string, avatar: string = '😎', ema
   
   // Create profile for the demo admin user in Supabase
   try {
-    // First check if profile already exists
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .maybeSingle();
+    await ensureUserProfileExists({
+      id: userId,
+      name: name,
+      avatar: avatar,
+      isAdmin: true
+    });
+    
+    // Also add admin role
+    await supabase
+      .from('user_roles')
+      .upsert({
+        user_id: userId,
+        role: 'admin'
+      }, { onConflict: 'user_id' });
       
-    // Only create if it doesn't exist
-    if (!existingProfile) {
-      await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          name: name,
-          avatar: avatar
-        });
-        
-      // Also add admin role
-      await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: 'admin'
-        });
-    }
   } catch (error) {
     console.error('Error creating Supabase profile for demo user:', error);
     // Continue anyway since we can still use the demo user in localStorage
@@ -128,4 +118,30 @@ export const createAdminUser = async (name: string, avatar: string = '😎', ema
   
   // Dispatch a custom event to notify the auth context
   document.dispatchEvent(new Event('customStorageEvent'));
+};
+
+// Helper function to ensure a user profile exists
+const ensureUserProfileExists = async (user: User) => {
+  try {
+    // First check if profile already exists
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle();
+      
+    // Only create if it doesn't exist
+    if (!existingProfile) {
+      await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar
+        });
+    }
+  } catch (error) {
+    console.error('Error checking/creating profile:', error);
+    // Continue anyway since we've removed the foreign key constraint
+  }
 };
