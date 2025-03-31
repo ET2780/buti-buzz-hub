@@ -19,21 +19,21 @@ const io = new Server(server, {
 const messages = [];
 const users = [];
 
-// Daily prompts that will rotate
+// Daily prompts that will rotate (now in Hebrew)
 const dailyPrompts = [
-  "Share one thing you're working on today!",
-  "Say hi and introduce yourself to someone new here.",
-  "What's your productivity hack for today?",
-  "What's something interesting you learned recently?",
-  "Coffee or tea? What's your preference today?",
-  "Share a resource that helped you this week!",
-  "What are you excited about right now?"
+  "שתפו במשהו אחד שאתם עובדים עליו היום!",
+  "אמרו שלום והציגו את עצמכם למישהו חדש כאן.",
+  "מהו טריק היעילות שלכם להיום?",
+  "מה למדתם לאחרונה שהיה מעניין?",
+  "קפה או תה? מה אתם מעדיפים היום?",
+  "שתפו במשהו שעזר לכם השבוע!",
+  "לגבי מה אתם מתרגשים כרגע?"
 ];
 
 // System bot for automated messages
 const systemBot = {
   id: "system",
-  name: "BUTI Bot",
+  name: "רובוט BUTI",
   avatar: "🤖",
   isAdmin: true
 };

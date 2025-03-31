@@ -6,6 +6,7 @@ export interface User {
   isAdmin: boolean;
   email?: string | null;
   tags?: string[];
+  customStatus?: string;
 }
 
 export interface Perk {
@@ -24,6 +25,7 @@ export interface Message {
   timestamp: Date;
   isCurrentUser: boolean;
   isAutomated?: boolean;
+  isPinned?: boolean;
 }
 
 export interface DailyPrompt {

@@ -1,13 +1,13 @@
 
 import React from 'react';
-import { Message } from '@/types';
-import { Send, AlertCircle, Loader2, Bot } from 'lucide-react';
+import { Message, User } from '@/types';
+import { Send, AlertCircle, Loader2, Bot, Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import ButiAvatar from './ButiAvatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import ButiAvatar from './ButiAvatar';
 
 interface ChatProps {
   messages: Message[];
@@ -19,6 +19,9 @@ interface ChatProps {
   connectionError: string | null;
   isConnecting: boolean;
   isSending?: boolean;
+  onUserAvatarClick?: (user: User) => void;
+  pinnedMessage?: string | null;
+  onManagePinnedMessage?: () => void;
 }
 
 const Chat: React.FC<ChatProps> = ({
@@ -30,7 +33,10 @@ const Chat: React.FC<ChatProps> = ({
   chatContainerRef,
   connectionError,
   isConnecting,
-  isSending = false
+  isSending = false,
+  onUserAvatarClick,
+  pinnedMessage,
+  onManagePinnedMessage
 }) => {
   const formatTime = (date: Date) => {
     return new Date(date).toLocaleTimeString('he-IL', {
@@ -39,9 +45,15 @@ const Chat: React.FC<ChatProps> = ({
     });
   };
 
+  const handleAvatarClick = (user: User) => {
+    if (onUserAvatarClick) {
+      onUserAvatarClick(user);
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full">
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-border">
         <h1 className="text-xl font-semibold">צ'אט BUTI</h1>
       </div>
       
@@ -49,6 +61,27 @@ const Chat: React.FC<ChatProps> = ({
         <Alert variant="destructive" className="m-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{connectionError}</AlertDescription>
+        </Alert>
+      )}
+      
+      {pinnedMessage && (
+        <Alert className="mx-4 mt-2 bg-muted/80 border-primary/30">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center gap-2">
+              <Pin className="h-4 w-4 text-primary shrink-0" />
+              <AlertDescription className="text-foreground">{pinnedMessage}</AlertDescription>
+            </div>
+            {onManagePinnedMessage && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 -mt-1 -mr-1" 
+                onClick={onManagePinnedMessage}
+              >
+                <PenLine className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         </Alert>
       )}
       
@@ -103,7 +136,10 @@ const Chat: React.FC<ChatProps> = ({
                 ) : (
                   <>
                     {!message.isCurrentUser && (
-                      <div className="flex-shrink-0 mr-2">
+                      <div 
+                        className="flex-shrink-0 mr-2 cursor-pointer" 
+                        onClick={() => handleAvatarClick(message.sender)}
+                      >
                         <ButiAvatar
                           avatar={message.sender.avatar}
                           name={message.sender.name}
@@ -116,8 +152,20 @@ const Chat: React.FC<ChatProps> = ({
                     <div className="max-w-[70%]">
                       {!message.isCurrentUser && (
                         <div className="mb-1">
-                          <div className="text-xs text-muted-foreground font-medium flex items-center">
-                            <span>{message.sender.name}</span>
+                          <div className="text-xs text-muted-foreground font-medium flex items-center flex-wrap">
+                            <span 
+                              className="cursor-pointer hover:underline"
+                              onClick={() => handleAvatarClick(message.sender)}
+                            >
+                              {message.sender.name}
+                            </span>
+                            
+                            {message.sender.customStatus && (
+                              <span className="text-[10px] text-muted-foreground mx-1">
+                                • {message.sender.customStatus}
+                              </span>
+                            )}
+                            
                             {message.sender.tags && message.sender.tags.length > 0 && (
                               <div className="flex gap-1 mr-1 flex-wrap">
                                 {message.sender.tags.slice(0, 2).map(tag => (

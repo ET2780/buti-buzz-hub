@@ -1,18 +1,28 @@
 
 import React, { useRef, useEffect } from 'react';
-import { Send, Smile, Bot } from 'lucide-react';
+import { Send, Smile, Bot, Pin, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ButiAvatar from './ButiAvatar';
-import { Message } from '@/types';
+import { Message, User } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ChatFeedProps {
   messages: Message[];
   onSendMessage: (message: string) => void;
+  onUserAvatarClick?: (user: User) => void;
+  pinnedMessage?: string | null;
+  onManagePinnedMessage?: () => void;
 }
 
-const ChatFeed: React.FC<ChatFeedProps> = ({ messages, onSendMessage }) => {
+const ChatFeed: React.FC<ChatFeedProps> = ({ 
+  messages, 
+  onSendMessage,
+  onUserAvatarClick,
+  pinnedMessage,
+  onManagePinnedMessage
+}) => {
   const [messageText, setMessageText] = React.useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -34,12 +44,39 @@ const ChatFeed: React.FC<ChatFeedProps> = ({ messages, onSendMessage }) => {
     }
   };
 
+  const handleAvatarClick = (user: User) => {
+    if (onUserAvatarClick) {
+      onUserAvatarClick(user);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen">
       <div className="p-4 border-b border-border">
         <h1 className="text-xl font-semibold">צ'אט קפה BUTI</h1>
         <p className="text-sm text-muted-foreground">שוחח/י עם אחרים בקפה כרגע</p>
       </div>
+      
+      {pinnedMessage && (
+        <Alert className="mx-4 mt-2 bg-muted/80 border-primary/30">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center gap-2">
+              <Pin className="h-4 w-4 text-primary shrink-0" />
+              <AlertDescription className="text-foreground">{pinnedMessage}</AlertDescription>
+            </div>
+            {onManagePinnedMessage && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 -mt-1 -mr-1" 
+                onClick={onManagePinnedMessage}
+              >
+                <PenLine className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        </Alert>
+      )}
       
       <div className="flex-grow overflow-y-auto p-4">
         <div className="space-y-4">
@@ -70,7 +107,10 @@ const ChatFeed: React.FC<ChatFeedProps> = ({ messages, onSendMessage }) => {
               ) : (
                 <>
                   {!message.isCurrentUser && (
-                    <div className="mr-2">
+                    <div 
+                      className="mr-2 cursor-pointer" 
+                      onClick={() => handleAvatarClick(message.sender)}
+                    >
                       <ButiAvatar 
                         avatar={message.sender.avatar} 
                         name={message.sender.name} 
@@ -82,7 +122,17 @@ const ChatFeed: React.FC<ChatFeedProps> = ({ messages, onSendMessage }) => {
                   <div>
                     {!message.isCurrentUser && (
                       <div className="text-xs text-muted-foreground mb-1 flex items-center">
-                        <span>{message.sender.name}</span>
+                        <span
+                          className="cursor-pointer hover:underline"
+                          onClick={() => handleAvatarClick(message.sender)}
+                        >
+                          {message.sender.name}
+                        </span>
+                        {message.sender.customStatus && (
+                          <span className="text-[10px] text-muted-foreground mx-1">
+                            • {message.sender.customStatus}
+                          </span>
+                        )}
                         {message.sender.tags && message.sender.tags.length > 0 && (
                           <div className="flex gap-1 mr-1 flex-wrap">
                             {message.sender.tags.slice(0, 2).map(tag => (

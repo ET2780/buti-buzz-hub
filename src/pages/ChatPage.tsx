@@ -1,20 +1,27 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Sidebar from '@/components/Sidebar';
 import SongModal from '@/components/SongModal';
 import ProfileModal from '@/components/ProfileModal';
+import UserProfileModal from '@/components/UserProfileModal';
+import PinnedMessageManager from '@/components/PinnedMessageManager';
 import PerksManagement from '@/components/PerksManagement';
 import Chat from '@/components/Chat';
 import { PerksService } from '@/services/PerksService';
 import { supabase } from '@/integrations/supabase/client';
 import { useChat } from '@/hooks/useChat';
+import { User } from '@/types';
 
 const ChatPage = () => {
   const { user } = useAuth();
   const [isSongModalOpen, setIsSongModalOpen] = React.useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false);
+  const [isUserProfileModalOpen, setIsUserProfileModalOpen] = React.useState(false);
+  const [isPinnedMessageModalOpen, setIsPinnedMessageModalOpen] = React.useState(false);
   const [isPerksModalOpen, setIsPerksModalOpen] = React.useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [pinnedMessage, setPinnedMessage] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [activePerks, setActivePerks] = React.useState([]);
   const [isLoadingPerks, setIsLoadingPerks] = React.useState(true);
@@ -26,7 +33,7 @@ const ChatPage = () => {
     isLoading: isLoadingChat,
     connectionError,
     isSending,
-    activeChatUsers, // Now using the activeChatUsers from the hook
+    activeChatUsers,
     handleInputChange,
     handleKeyDown,
     sendMessage
@@ -39,6 +46,51 @@ const ChatPage = () => {
     }
   }, [messages]);
 
+  // Fetch pinned message when component mounts
+  useEffect(() => {
+    const fetchPinnedMessage = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('system_messages')
+          .select('text')
+          .eq('id', 'pinned')
+          .maybeSingle();
+          
+        if (error) throw error;
+        
+        if (data) {
+          setPinnedMessage(data.text);
+        }
+      } catch (error) {
+        console.error('Error fetching pinned message:', error);
+      }
+    };
+    
+    fetchPinnedMessage();
+  }, []);
+
+  // Set up subscription to system_messages table for real-time updates
+  useEffect(() => {
+    const systemChannel = supabase
+      .channel('system-messages')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'system_messages' },
+        (payload) => {
+          if (payload.new && payload.new.id === 'pinned') {
+            setPinnedMessage(payload.new.text);
+          } else if (payload.eventType === 'DELETE' && payload.old && payload.old.id === 'pinned') {
+            setPinnedMessage(null);
+          }
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(systemChannel);
+    };
+  }, []);
+
   const openSongModal = () => setIsSongModalOpen(true);
   const closeSongModal = () => setIsSongModalOpen(false);
 
@@ -47,6 +99,25 @@ const ChatPage = () => {
 
   const openPerksModal = () => setIsPerksModalOpen(true);
   const closePerksModal = () => setIsPerksModalOpen(false);
+
+  const openPinnedMessageModal = () => setIsPinnedMessageModalOpen(true);
+  const closePinnedMessageModal = () => setIsPinnedMessageModalOpen(false);
+
+  const handleUserAvatarClick = (clickedUser: User) => {
+    if (clickedUser.id === user?.id) {
+      // If clicking own avatar, open profile modal
+      openProfileModal();
+    } else {
+      // If clicking another user's avatar, open user profile modal
+      setSelectedUser(clickedUser);
+      setIsUserProfileModalOpen(true);
+    }
+  };
+
+  const closeUserProfileModal = () => {
+    setIsUserProfileModalOpen(false);
+    setSelectedUser(null);
+  };
 
   // Function to load active perks
   const loadActivePerks = async () => {
@@ -117,6 +188,9 @@ const ChatPage = () => {
         connectionError={connectionError}
         isConnecting={isLoadingChat}
         isSending={isSending}
+        onUserAvatarClick={handleUserAvatarClick}
+        pinnedMessage={pinnedMessage}
+        onManagePinnedMessage={user?.isAdmin ? openPinnedMessageModal : undefined}
       />
       
       {isSongModalOpen && (
@@ -125,6 +199,23 @@ const ChatPage = () => {
       
       {isProfileModalOpen && (
         <ProfileModal isOpen={isProfileModalOpen} onClose={closeProfileModal} />
+      )}
+      
+      {isUserProfileModalOpen && selectedUser && (
+        <UserProfileModal 
+          isOpen={isUserProfileModalOpen} 
+          onClose={closeUserProfileModal} 
+          user={selectedUser} 
+        />
+      )}
+      
+      {isPinnedMessageModalOpen && user?.isAdmin && (
+        <PinnedMessageManager
+          isOpen={isPinnedMessageModalOpen}
+          onClose={closePinnedMessageModal}
+          currentPinnedMessage={pinnedMessage}
+          onMessageUpdated={setPinnedMessage}
+        />
       )}
       
       {isPerksModalOpen && (
