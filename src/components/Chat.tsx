@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Message } from '@/types';
-import { Send, AlertCircle, Loader2 } from 'lucide-react';
+import { Send, AlertCircle, Loader2, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -83,56 +83,74 @@ const Chat: React.FC<ChatProps> = ({
               <div
                 key={message.id}
                 className={`flex ${
-                  message.isCurrentUser ? "justify-end" : "justify-start"
+                  message.isAutomated 
+                    ? "justify-center" 
+                    : message.isCurrentUser 
+                      ? "justify-end" 
+                      : "justify-start"
                 }`}
               >
-                {!message.isCurrentUser && (
-                  <div className="flex-shrink-0 mr-2">
-                    <ButiAvatar
-                      avatar={message.sender.avatar}
-                      name={message.sender.name}
-                      isAdmin={message.sender.isAdmin}
-                      size="sm"
-                    />
-                  </div>
-                )}
-                
-                <div className="max-w-[70%]">
-                  {!message.isCurrentUser && (
-                    <div className="mb-1">
-                      <div className="text-xs text-muted-foreground font-medium flex items-center">
-                        <span>{message.sender.name}</span>
-                        {message.sender.tags && message.sender.tags.length > 0 && (
-                          <div className="flex gap-1 mr-1 flex-wrap">
-                            {message.sender.tags.slice(0, 2).map(tag => (
-                              <Badge key={tag} variant="outline" className="text-[10px] px-1 py-0">
-                                {tag}
-                              </Badge>
-                            ))}
-                            {message.sender.tags.length > 2 && (
-                              <Badge variant="outline" className="text-[10px] px-1 py-0">
-                                +{message.sender.tags.length - 2}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
+                {message.isAutomated ? (
+                  <div className="bg-muted/50 rounded-lg p-3 max-w-[80%] border border-border shadow-sm flex items-center gap-2">
+                    <Bot size={16} className="text-primary" />
+                    <div>
+                      <p className="font-medium text-sm">{message.text}</p>
+                      <div className="text-xs opacity-70 text-right mt-1">
+                        {formatTime(message.timestamp)}
                       </div>
                     </div>
-                  )}
-                  
-                  <div
-                    className={`rounded-lg p-3 ${
-                      message.isCurrentUser
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    }`}
-                  >
-                    <p>{message.text}</p>
-                    <div className="text-xs opacity-70 text-right mt-1">
-                      {formatTime(message.timestamp)}
-                    </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {!message.isCurrentUser && (
+                      <div className="flex-shrink-0 mr-2">
+                        <ButiAvatar
+                          avatar={message.sender.avatar}
+                          name={message.sender.name}
+                          isAdmin={message.sender.isAdmin}
+                          size="sm"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="max-w-[70%]">
+                      {!message.isCurrentUser && (
+                        <div className="mb-1">
+                          <div className="text-xs text-muted-foreground font-medium flex items-center">
+                            <span>{message.sender.name}</span>
+                            {message.sender.tags && message.sender.tags.length > 0 && (
+                              <div className="flex gap-1 mr-1 flex-wrap">
+                                {message.sender.tags.slice(0, 2).map(tag => (
+                                  <Badge key={tag} variant="outline" className="text-[10px] px-1 py-0">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {message.sender.tags.length > 2 && (
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                    +{message.sender.tags.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div
+                        className={`rounded-lg p-3 ${
+                          message.isCurrentUser
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}
+                      >
+                        <p>{message.text}</p>
+                        <div className="text-xs opacity-70 text-right mt-1">
+                          {formatTime(message.timestamp)}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>

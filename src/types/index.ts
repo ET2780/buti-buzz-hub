@@ -23,4 +23,11 @@ export interface Message {
   text: string;
   timestamp: Date;
   isCurrentUser: boolean;
+  isAutomated?: boolean;
+}
+
+export interface DailyPrompt {
+  id: string;
+  text: string;
+  createdAt: Date;
 }

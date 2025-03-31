@@ -1,10 +1,11 @@
 
 import React, { useRef, useEffect } from 'react';
-import { Send, Smile } from 'lucide-react';
+import { Send, Smile, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ButiAvatar from './ButiAvatar';
 import { Message } from '@/types';
+import { Badge } from '@/components/ui/badge';
 
 interface ChatFeedProps {
   messages: Message[];
@@ -45,34 +46,71 @@ const ChatFeed: React.FC<ChatFeedProps> = ({ messages, onSendMessage }) => {
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.isCurrentUser ? "justify-end" : "justify-start"}`}
+              className={`flex ${
+                message.isAutomated 
+                  ? "justify-center" 
+                  : message.isCurrentUser 
+                    ? "justify-end" 
+                    : "justify-start"
+              }`}
             >
-              {!message.isCurrentUser && (
-                <div className="mr-2">
-                  <ButiAvatar 
-                    avatar={message.sender.avatar} 
-                    name={message.sender.name} 
-                    isAdmin={message.sender.isAdmin}
-                    size="sm"
-                  />
-                </div>
-              )}
-              <div>
-                {!message.isCurrentUser && (
-                  <div className="text-xs text-muted-foreground mb-1">
-                    {message.sender.name}
+              {message.isAutomated ? (
+                <div className="bg-muted/50 rounded-lg p-3 max-w-[80%] border border-border shadow-sm flex items-center gap-2">
+                  <Bot size={16} className="text-primary" />
+                  <div>
+                    <p className="font-medium text-sm">{message.text}</p>
+                    <div className="text-xs opacity-70 text-right mt-1">
+                      {new Date(message.timestamp).toLocaleTimeString('he-IL', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </div>
                   </div>
-                )}
-                <div
-                  className={`message-bubble ${
-                    message.isCurrentUser
-                      ? "message-bubble-mine"
-                      : "message-bubble-others"
-                  }`}
-                >
-                  {message.text}
                 </div>
-              </div>
+              ) : (
+                <>
+                  {!message.isCurrentUser && (
+                    <div className="mr-2">
+                      <ButiAvatar 
+                        avatar={message.sender.avatar} 
+                        name={message.sender.name} 
+                        isAdmin={message.sender.isAdmin}
+                        size="sm"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    {!message.isCurrentUser && (
+                      <div className="text-xs text-muted-foreground mb-1 flex items-center">
+                        <span>{message.sender.name}</span>
+                        {message.sender.tags && message.sender.tags.length > 0 && (
+                          <div className="flex gap-1 mr-1 flex-wrap">
+                            {message.sender.tags.slice(0, 2).map(tag => (
+                              <Badge key={tag} variant="outline" className="text-[10px] px-1 py-0">
+                                {tag}
+                              </Badge>
+                            ))}
+                            {message.sender.tags.length > 2 && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                +{message.sender.tags.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div
+                      className={`message-bubble ${
+                        message.isCurrentUser
+                          ? "message-bubble-mine"
+                          : "message-bubble-others"
+                      }`}
+                    >
+                      {message.text}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           ))}
           <div ref={messagesEndRef} />
