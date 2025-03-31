@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { createAdminUser } from '@/utils/authUtils';
 import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
 const LoginForm = () => {
   const [name, setName] = useState('');
@@ -95,7 +96,9 @@ const LoginForm = () => {
           }
         }
       } else {
-        // Regular guest user
+        // Regular guest user - generate a valid UUID
+        const userId = uuidv4();
+        localStorage.setItem('tempMockUserId', userId);
         localStorage.setItem('tempMockGuestName', name);
         localStorage.setItem('tempMockAvatar', randomAvatar);
         localStorage.setItem('tempMockIsStaff', 'false');

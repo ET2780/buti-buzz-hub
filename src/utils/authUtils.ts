@@ -1,6 +1,7 @@
 
 import { User } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
 // Demo perks storage key
 const DEMO_PERKS_STORAGE_KEY = 'buti_demo_perks';
@@ -12,11 +13,19 @@ export const checkForDemoLogin = () => {
   const mockIsStaff = localStorage.getItem('tempMockIsStaff') === 'true';
   const mockGuestName = localStorage.getItem('tempMockGuestName');
   const mockAvatar = localStorage.getItem('tempMockAvatar');
+  const mockUserId = localStorage.getItem('tempMockUserId');
   
   if (mockEmail || mockGuestName) {
     console.log("Found demo login for:", mockEmail || mockGuestName);
+    const userId = mockUserId || uuidv4(); // Use stored ID or generate new valid UUID
+    
+    // Save the UUID to localStorage if it's a new one
+    if (!mockUserId) {
+      localStorage.setItem('tempMockUserId', userId);
+    }
+    
     const mockUser: User = {
-      id: mockEmail || mockGuestName || `guest-${Date.now()}`,
+      id: userId, // Always use a valid UUID
       name: mockGuestName || (mockEmail ? (mockEmail.includes('guest') ? `אורח/ת ${Math.floor(Math.random() * 1000)}` : mockEmail.split('@')[0]) : 'Guest'),
       avatar: mockAvatar || '😊',
       isAdmin: mockIsStaff,
@@ -43,6 +52,7 @@ export const signOutUser = async () => {
   localStorage.removeItem('tempMockGuestName');
   localStorage.removeItem('tempMockAvatar');
   localStorage.removeItem('tempMockResetEmail');
+  localStorage.removeItem('tempMockUserId'); // Also clear stored UUID
   
   // Clear demo perks when admin logs out
   localStorage.removeItem(DEMO_PERKS_STORAGE_KEY);
@@ -74,11 +84,15 @@ export const createAdminUser = async (name: string, avatar: string = '😎', ema
     }
   }
   
+  // Generate a valid UUID for the demo user
+  const userId = uuidv4();
+  
   // Fallback to localStorage for demo purposes
   localStorage.setItem('tempMockEmail', email || `admin-${Date.now()}@buti.com`);
   localStorage.setItem('tempMockIsStaff', 'true');
   localStorage.setItem('tempMockGuestName', name);
   localStorage.setItem('tempMockAvatar', avatar);
+  localStorage.setItem('tempMockUserId', userId);
   
   // Dispatch a custom event to notify the auth context
   document.dispatchEvent(new Event('customStorageEvent'));

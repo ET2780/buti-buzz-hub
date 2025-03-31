@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Message, User } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4, validate as isUuid } from 'uuid';
 import { toast } from 'sonner';
 
 export const useChat = () => {
@@ -175,8 +175,9 @@ export const useChat = () => {
     try {
       console.log("Sending message as user:", user.id);
       
-      // Make sure user.id is a valid UUID
-      if (!user.id || typeof user.id !== 'string' || user.id.length !== 36) {
+      // Validate UUID properly, using the uuid package validator
+      if (!user.id || !isUuid(user.id)) {
+        console.error("Invalid UUID format for user ID:", user.id);
         throw new Error("Invalid user ID. Please try logging in again.");
       }
       
@@ -184,7 +185,7 @@ export const useChat = () => {
         .from('messages')
         .insert({
           text: newMessage.trim(),
-          sender_id: user.id // Ensure this is a valid UUID
+          sender_id: user.id // Now guaranteed to be a valid UUID
         });
       
       if (error) {
