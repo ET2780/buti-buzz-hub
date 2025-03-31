@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Sidebar from '@/components/Sidebar';
@@ -11,7 +10,7 @@ import Chat from '@/components/Chat';
 import { PerksService } from '@/services/PerksService';
 import { supabase } from '@/integrations/supabase/client';
 import { useChat } from '@/hooks/useChat';
-import { User } from '@/types';
+import { User, SystemMessage } from '@/types';
 
 const ChatPage = () => {
   const { user } = useAuth();
@@ -50,7 +49,7 @@ const ChatPage = () => {
   useEffect(() => {
     const fetchPinnedMessage = async () => {
       try {
-        // Using 'as any' to bypass TypeScript issues with system_messages table
+        // Explicitly type the response data
         const { data, error } = await supabase
           .from('system_messages' as any)
           .select('text')
@@ -59,7 +58,8 @@ const ChatPage = () => {
           
         if (error) throw error;
         
-        if (data) {
+        // Check if data exists and has the text property before accessing it
+        if (data && 'text' in data) {
           setPinnedMessage(data.text);
         }
       } catch (error) {
