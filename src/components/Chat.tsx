@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ButiAvatar from './ButiAvatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ChatProps {
   messages: Message[];
@@ -50,12 +51,6 @@ const Chat: React.FC<ChatProps> = ({
         </Alert>
       )}
       
-      {isConnecting && (
-        <div className="text-center text-muted-foreground py-4 animate-pulse">
-          טוען הודעות...
-        </div>
-      )}
-      
       <div 
         ref={chatContainerRef}
         className="flex-1 p-4 overflow-y-auto"
@@ -64,7 +59,22 @@ const Chat: React.FC<ChatProps> = ({
           <div className="text-center text-muted-foreground py-10">
             {connectionError 
               ? "לא ניתן לטעון הודעות כרגע." 
-              : isConnecting ? "טוען הודעות..." : "אין הודעות עדיין. התחילו שיחה!"}
+              : isConnecting ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-[100px]" />
+                      <Skeleton className="h-12 w-[200px]" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-2">
+                    <div className="space-y-2">
+                      <Skeleton className="h-12 w-[150px]" />
+                    </div>
+                  </div>
+                </div>
+              ) : "אין הודעות עדיין. התחילו שיחה!"}
           </div>
         ) : (
           <div className="space-y-4">

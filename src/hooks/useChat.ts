@@ -13,6 +13,7 @@ export const useChat = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const fetchAttempts = useRef(0);
   
   // Load initial messages
   useEffect(() => {
@@ -79,12 +80,24 @@ export const useChat = () => {
         });
         
         setMessages(formattedMessages);
+        fetchAttempts.current = 0; // Reset attempts on success
       } catch (error: any) {
         console.error('Error fetching messages:', error);
-        setConnectionError('Failed to load messages. Please try again later.');
-        toast.error('Failed to load chat messages');
+        
+        fetchAttempts.current += 1;
+        if (fetchAttempts.current < 3) {
+          // Retry up to 3 times
+          console.log(`Retrying fetch messages (attempt ${fetchAttempts.current})...`);
+          setTimeout(fetchMessages, 2000); // Retry after 2 seconds
+          return; // Don't update loading state yet
+        } else {
+          setConnectionError('Failed to load messages. Please try again later.');
+          toast.error('Failed to load chat messages');
+        }
       } finally {
-        setIsLoading(false);
+        if (fetchAttempts.current >= 3 || fetchAttempts.current === 0) {
+          setIsLoading(false); // Only set loading to false if we're not retrying
+        }
       }
     };
     
@@ -138,7 +151,15 @@ export const useChat = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to messages!');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to messages');
+          setConnectionError('Failed to connect to chat. Please try refreshing the page.');
+        }
+      });
     
     // Clean up subscription
     return () => {
