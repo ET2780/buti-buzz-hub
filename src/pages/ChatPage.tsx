@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Sidebar from '@/components/Sidebar';
@@ -58,9 +59,12 @@ const ChatPage = () => {
           
         if (error) throw error;
         
-        // Add additional null check for data
-        if (data !== null && typeof data === 'object' && 'text' in data && typeof data.text === 'string') {
-          setPinnedMessage(data.text);
+        // Add comprehensive null and type checking
+        if (data && typeof data === 'object' && 'text' in data) {
+          const pinnedText = data.text;
+          if (typeof pinnedText === 'string') {
+            setPinnedMessage(pinnedText);
+          }
         }
       } catch (error) {
         console.error('Error fetching pinned message:', error);
