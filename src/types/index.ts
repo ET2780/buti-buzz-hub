@@ -33,3 +33,10 @@ export interface DailyPrompt {
   text: string;
   createdAt: Date;
 }
+
+export interface SystemMessage {
+  id: string;
+  text: string;
+  created_at: string;
+  updated_at: string;
+}

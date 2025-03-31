@@ -50,8 +50,9 @@ const ChatPage = () => {
   useEffect(() => {
     const fetchPinnedMessage = async () => {
       try {
+        // Using 'as any' to bypass TypeScript issues with system_messages table
         const { data, error } = await supabase
-          .from('system_messages')
+          .from('system_messages' as any)
           .select('text')
           .eq('id', 'pinned')
           .maybeSingle();
@@ -77,9 +78,12 @@ const ChatPage = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'system_messages' },
         (payload) => {
-          if (payload.new && payload.new.id === 'pinned') {
-            setPinnedMessage(payload.new.text);
-          } else if (payload.eventType === 'DELETE' && payload.old && payload.old.id === 'pinned') {
+          const newData = payload.new as any;
+          const oldData = payload.old as any;
+          
+          if (newData && newData.id === 'pinned') {
+            setPinnedMessage(newData.text);
+          } else if (payload.eventType === 'DELETE' && oldData && oldData.id === 'pinned') {
             setPinnedMessage(null);
           }
         }

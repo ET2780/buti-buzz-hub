@@ -38,8 +38,9 @@ const PinnedMessageManager: React.FC<PinnedMessageManagerProps> = ({
     setIsSaving(true);
     try {
       // Update or insert the pinned message in Supabase (system messages table)
+      // Using from() with a string literal to work around TypeScript issues
       const { error } = await supabase
-        .from('system_messages')
+        .from('system_messages' as any)
         .upsert({ 
           id: 'pinned', 
           text: message.trim(),
@@ -64,7 +65,7 @@ const PinnedMessageManager: React.FC<PinnedMessageManagerProps> = ({
     try {
       // Delete the pinned message
       const { error } = await supabase
-        .from('system_messages')
+        .from('system_messages' as any)
         .delete()
         .eq('id', 'pinned');
       
