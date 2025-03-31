@@ -26,6 +26,7 @@ const ChatPage = () => {
     newMessage,
     isLoading: isLoadingChat,
     connectionError,
+    isSending,
     handleInputChange,
     handleKeyDown,
     sendMessage
@@ -110,6 +111,7 @@ const ChatPage = () => {
         chatContainerRef={chatContainerRef}
         connectionError={connectionError}
         isConnecting={isLoadingChat}
+        isSending={isSending}
       />
       
       {isSongModalOpen && (

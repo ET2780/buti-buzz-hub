@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Message } from '@/types';
-import { Send, AlertCircle } from 'lucide-react';
+import { Send, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ButiAvatar from './ButiAvatar';
@@ -16,6 +16,7 @@ interface ChatProps {
   chatContainerRef: React.RefObject<HTMLDivElement>;
   connectionError: string | null;
   isConnecting: boolean;
+  isSending?: boolean;
 }
 
 const Chat: React.FC<ChatProps> = ({
@@ -26,7 +27,8 @@ const Chat: React.FC<ChatProps> = ({
   sendMessage,
   chatContainerRef,
   connectionError,
-  isConnecting
+  isConnecting,
+  isSending = false
 }) => {
   const formatTime = (date: Date) => {
     return new Date(date).toLocaleTimeString('he-IL', {
@@ -119,15 +121,19 @@ const Chat: React.FC<ChatProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={connectionError ? "לא ניתן לשלוח הודעות כרגע" : "הקלידו הודעה..."}
             className="flex-1 rounded-full"
-            disabled={!!connectionError}
+            disabled={!!connectionError || isSending}
           />
           <Button
             onClick={sendMessage}
-            disabled={!newMessage.trim() || !!connectionError}
+            disabled={!newMessage.trim() || !!connectionError || isSending}
             className="rounded-full"
             size="icon"
           >
-            <Send className="h-4 w-4" />
+            {isSending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>

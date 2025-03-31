@@ -12,6 +12,7 @@ export const useChat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
   
   // Load initial messages
   useEffect(() => {
@@ -116,7 +117,7 @@ export const useChat = () => {
               .select('role')
               .eq('user_id', messageData.sender_id);
               
-            const isAdmin = roleData?.some((r: any) => r.role === 'admin') || false;
+            const isAdmin = roleData && roleData.some((r: any) => r.role === 'admin') || false;
             
             const newMessage: Message = {
               id: messageData.id,
@@ -125,8 +126,8 @@ export const useChat = () => {
               isCurrentUser: messageData.sender_id === user.id,
               sender: {
                 id: messageData.sender_id,
-                name: profile?.name || 'Unknown User',
-                avatar: profile?.avatar || '😊',
+                name: profile ? profile.name : 'Unknown User',
+                avatar: profile ? profile.avatar : '😊',
                 isAdmin: isAdmin
               }
             };
@@ -146,9 +147,13 @@ export const useChat = () => {
   }, [user]);
   
   const sendMessage = async () => {
-    if (!user || !newMessage.trim()) return;
+    if (!user || !newMessage.trim() || isSending) return;
+    
+    setIsSending(true);
     
     try {
+      console.log("Sending message as user:", user.id);
+      
       const { error } = await supabase
         .from('messages')
         .insert({
@@ -156,13 +161,18 @@ export const useChat = () => {
           sender_id: user.id
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error details:', error);
+        throw error;
+      }
       
       // Clear input field after sending
       setNewMessage('');
     } catch (error: any) {
       console.error('Error sending message:', error);
-      toast.error('Failed to send message');
+      toast.error(`Failed to send message: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsSending(false);
     }
   };
   
@@ -181,6 +191,7 @@ export const useChat = () => {
     newMessage,
     isLoading,
     connectionError,
+    isSending,
     handleInputChange,
     handleKeyDown,
     sendMessage
