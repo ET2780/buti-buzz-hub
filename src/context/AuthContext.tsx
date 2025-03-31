@@ -1,3 +1,4 @@
+
 import { createContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@/types';
 import { toast } from 'sonner';
@@ -42,12 +43,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             
             const isUserAdmin = roles?.some(r => r.role === 'admin') || false;
             
+            // Get user profile including tags
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('name, avatar, tags')
+              .eq('id', session.user.id)
+              .maybeSingle();
+              
+            if (profileError) {
+              console.error('Error fetching user profile:', profileError);
+            }
+            
             const userData: User = {
               id: session.user.id,
-              name: session.user.user_metadata.name || session.user.email?.split('@')[0] || 'User',
-              avatar: session.user.user_metadata.avatar || '😊',
+              name: profile?.name || session.user.user_metadata.name || session.user.email?.split('@')[0] || 'User',
+              avatar: profile?.avatar || session.user.user_metadata.avatar || '😊',
               isAdmin: isUserAdmin,
-              email: session.user.email
+              email: session.user.email,
+              tags: profile?.tags || []
             };
             
             setUser(userData);
@@ -78,12 +91,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           const isUserAdmin = roles?.some(r => r.role === 'admin') || false;
           
+          // Get user profile including tags
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('name, avatar, tags')
+            .eq('id', session.user.id)
+            .maybeSingle();
+            
+          if (profileError) {
+            console.error('Error fetching user profile:', profileError);
+          }
+          
           const userData: User = {
             id: session.user.id,
-            name: session.user.user_metadata.name || session.user.email?.split('@')[0] || 'User',
-            avatar: session.user.user_metadata.avatar || '😊',
+            name: profile?.name || session.user.user_metadata.name || session.user.email?.split('@')[0] || 'User',
+            avatar: profile?.avatar || session.user.user_metadata.avatar || '😊',
             isAdmin: isUserAdmin,
-            email: session.user.email
+            email: session.user.email,
+            tags: profile?.tags || []
           };
           
           setUser(userData);
@@ -179,14 +204,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data: session } = await supabase.auth.getSession();
       if (session?.session) {
         // Update user metadata in Supabase
-        const { error } = await supabase.auth.updateUser({
+        const { error: authError } = await supabase.auth.updateUser({
           data: {
             name: updates.name || user.name,
             avatar: updates.avatar || user.avatar
           }
         });
         
-        if (error) throw error;
+        if (authError) throw authError;
+        
+        // Update profile in profiles table including tags
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            name: updates.name || user.name,
+            avatar: updates.avatar || user.avatar,
+            tags: updates.tags || user.tags || [],
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+          
+        if (profileError) throw profileError;
       } else {
         // For simple name-only login, just update the local state
         if (updates.name) {
@@ -195,6 +233,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (updates.avatar) {
           localStorage.setItem('tempMockAvatar', updates.avatar);
         }
+        // We can't store tags for demo users in this implementation
       }
       
       // Update local state

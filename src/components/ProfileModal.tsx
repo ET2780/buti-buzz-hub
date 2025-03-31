@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { LogOut, Save, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +10,19 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import Logo from './Logo';
 import { useAuth } from '@/hooks/useAuth';
+
+// Available interest tags
+const INTEREST_TAGS = [
+  'Working remotely',
+  'Open to networking',
+  'Creative (design/writing)',
+  'Tech (coding/startups)',
+  'Student/researcher'
+];
 
 const EMOJIS = ['😊', '😎', '🤓', '🧠', '👾', '🤖', '👋', '🦄', '🌟', '🍕', '🍩', '☕', '🌈', '🚀'];
 
@@ -26,13 +38,23 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   const { user, updateProfile, signOut } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [avatar, setAvatar] = useState(user?.avatar || '😊');
+  const [selectedTags, setSelectedTags] = useState<string[]>(user?.tags || []);
   const [saving, setSaving] = useState(false);
   const isAdmin = user?.isAdmin === true;
+
+  // Update local state when user data changes
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setAvatar(user.avatar || '😊');
+      setSelectedTags(user.tags || []);
+    }
+  }, [user]);
 
   const handleSave = async () => {
     if (name.trim()) {
       setSaving(true);
-      await updateProfile({ name, avatar });
+      await updateProfile({ name, avatar, tags: selectedTags });
       setSaving(false);
       onClose();
     }
@@ -41,6 +63,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   const handleLogout = async () => {
     await signOut();
     onClose();
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag) 
+        : [...prev, tag]
+    );
   };
 
   return (
@@ -86,6 +116,40 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                   >
                     {emoji}
                   </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <div>
+            <label className="text-sm font-medium mb-2 block">תחומי עניין</label>
+            <div className="space-y-2">
+              {INTEREST_TAGS.map((tag) => (
+                <div key={tag} className="flex items-center space-x-2 space-x-reverse rtl:space-x-reverse">
+                  <Checkbox 
+                    id={`tag-${tag}`}
+                    checked={selectedTags.includes(tag)}
+                    onCheckedChange={() => toggleTag(tag)}
+                  />
+                  <label
+                    htmlFor={`tag-${tag}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mr-2"
+                  >
+                    {tag}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {selectedTags.length > 0 && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">תגיות נבחרות</label>
+              <div className="flex flex-wrap gap-2">
+                {selectedTags.map(tag => (
+                  <Badge key={tag} variant="secondary" className="cursor-pointer" onClick={() => toggleTag(tag)}>
+                    {tag} ✕
+                  </Badge>
                 ))}
               </div>
             </div>

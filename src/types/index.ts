@@ -5,6 +5,7 @@ export interface User {
   avatar: string;
   isAdmin: boolean;
   email?: string | null;
+  tags?: string[];
 }
 
 export interface Perk {

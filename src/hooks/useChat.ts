@@ -44,7 +44,7 @@ export const useChat = () => {
               // Fetch the sender details
               const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .select('name, avatar')
+                .select('name, avatar, tags')
                 .eq('id', messageData.sender_id)
                 .maybeSingle();
                 
@@ -67,7 +67,8 @@ export const useChat = () => {
                   id: messageData.sender_id,
                   name: profile ? profile.name : 'Unknown User',
                   avatar: profile ? profile.avatar : '😊',
-                  isAdmin: isAdmin
+                  isAdmin: isAdmin,
+                  tags: profile ? profile.tags : []
                 }
               };
               
@@ -116,6 +117,7 @@ export const useChat = () => {
               name: userInfo.user_name || 'Unknown User',
               avatar: userInfo.avatar || '😊',
               isAdmin: userInfo.is_admin || false,
+              tags: userInfo.tags || []
             };
           });
           
@@ -130,6 +132,7 @@ export const useChat = () => {
               user_name: user.name,
               avatar: user.avatar,
               is_admin: user.isAdmin,
+              tags: user.tags || [],
               online_at: new Date().toISOString(),
             });
           }
@@ -153,7 +156,7 @@ export const useChat = () => {
         // Then, fetch all profiles to match with sender_ids
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, name, avatar');
+          .select('id, name, avatar, tags');
           
         if (profilesError) throw profilesError;
         
@@ -192,7 +195,8 @@ export const useChat = () => {
               id: message.sender_id,
               name: profile.name || 'Unknown User',
               avatar: profile.avatar || '😊',
-              isAdmin: isAdmin
+              isAdmin: isAdmin,
+              tags: profile.tags || []
             }
           };
         });
@@ -288,7 +292,8 @@ export const useChat = () => {
           .insert({
             id: user.id,
             name: user.name,
-            avatar: user.avatar
+            avatar: user.avatar,
+            tags: user.tags || []
           });
       }
     } catch (error) {

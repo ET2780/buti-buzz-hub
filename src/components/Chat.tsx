@@ -4,6 +4,7 @@ import { Message } from '@/types';
 import { Send, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import ButiAvatar from './ButiAvatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -98,8 +99,24 @@ const Chat: React.FC<ChatProps> = ({
                 
                 <div className="max-w-[70%]">
                   {!message.isCurrentUser && (
-                    <div className="text-xs text-muted-foreground mb-1 font-medium">
-                      {message.sender.name}
+                    <div className="mb-1">
+                      <div className="text-xs text-muted-foreground font-medium flex items-center">
+                        <span>{message.sender.name}</span>
+                        {message.sender.tags && message.sender.tags.length > 0 && (
+                          <div className="flex gap-1 mr-1 flex-wrap">
+                            {message.sender.tags.slice(0, 2).map(tag => (
+                              <Badge key={tag} variant="outline" className="text-[10px] px-1 py-0">
+                                {tag}
+                              </Badge>
+                            ))}
+                            {message.sender.tags.length > 2 && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                +{message.sender.tags.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                   
