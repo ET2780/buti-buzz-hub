@@ -25,9 +25,13 @@ export const usePinnedMessage = () => {
           if (typeof pinnedText === 'string') {
             setPinnedMessage(pinnedText);
           }
+        } else {
+          // If no data is found, ensure pinnedMessage is null
+          setPinnedMessage(null);
         }
       } catch (error) {
         console.error('Error fetching pinned message:', error);
+        setPinnedMessage(null);
       }
     };
     

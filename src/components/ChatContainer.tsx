@@ -62,8 +62,6 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         isConnecting={isLoadingChat}
         isSending={isSending}
         onUserAvatarClick={onUserAvatarClick}
-        pinnedMessage={pinnedMessage}
-        onManagePinnedMessage={onManagePinnedMessage}
       />
     </div>
   );

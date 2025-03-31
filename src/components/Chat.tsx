@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Message, User } from '@/types';
 import { Send, AlertCircle, Loader2, Bot, Pin, PenLine } from 'lucide-react';
@@ -20,8 +19,6 @@ interface ChatProps {
   isConnecting: boolean;
   isSending?: boolean;
   onUserAvatarClick?: (user: User) => void;
-  pinnedMessage?: string | null;
-  onManagePinnedMessage?: () => void;
 }
 
 const Chat: React.FC<ChatProps> = ({
@@ -34,9 +31,7 @@ const Chat: React.FC<ChatProps> = ({
   connectionError,
   isConnecting,
   isSending = false,
-  onUserAvatarClick,
-  pinnedMessage,
-  onManagePinnedMessage
+  onUserAvatarClick
 }) => {
   const formatTime = (date: Date) => {
     return new Date(date).toLocaleTimeString('he-IL', {
@@ -53,35 +48,10 @@ const Chat: React.FC<ChatProps> = ({
 
   return (
     <div className="flex-1 flex flex-col h-full">
-      <div className="p-4 border-b border-border">
-        <h1 className="text-xl font-semibold">צ'אט BUTI</h1>
-      </div>
-      
       {connectionError && (
         <Alert variant="destructive" className="m-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{connectionError}</AlertDescription>
-        </Alert>
-      )}
-      
-      {pinnedMessage && (
-        <Alert className="mx-4 mt-2 bg-muted/80 border-primary/30">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-2">
-              <Pin className="h-4 w-4 text-primary shrink-0" />
-              <AlertDescription className="text-foreground">{pinnedMessage}</AlertDescription>
-            </div>
-            {onManagePinnedMessage && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6 -mt-1 -mr-1" 
-                onClick={onManagePinnedMessage}
-              >
-                <PenLine className="h-3 w-3" />
-              </Button>
-            )}
-          </div>
         </Alert>
       )}
       
