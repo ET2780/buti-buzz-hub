@@ -19,12 +19,9 @@ export const usePinnedMessage = () => {
           
         if (error) throw error;
         
-        // Add comprehensive null and type checking
-        if (data && typeof data === 'object' && 'text' in data) {
-          const pinnedText = data.text;
-          if (typeof pinnedText === 'string') {
-            setPinnedMessage(pinnedText);
-          }
+        // Comprehensive null checking to fix TypeScript errors
+        if (data && 'text' in data && typeof data.text === 'string') {
+          setPinnedMessage(data.text);
         } else {
           // If no data is found, ensure pinnedMessage is null
           setPinnedMessage(null);

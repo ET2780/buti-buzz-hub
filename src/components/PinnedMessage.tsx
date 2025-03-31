@@ -16,7 +16,7 @@ const PinnedMessage: React.FC<PinnedMessageProps> = ({
   if (!message) return null;
   
   return (
-    <Alert className="mx-4 mt-2 bg-muted/80 border-primary/30">
+    <Alert className="mx-4 mt-2 mb-2 bg-muted/80 border-primary/30">
       <div className="flex justify-between items-start">
         <div className="flex items-center gap-2">
           <Pin className="h-4 w-4 text-primary shrink-0" />

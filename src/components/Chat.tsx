@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Message, User } from '@/types';
-import { Send, AlertCircle, Loader2, Bot, Pin, PenLine } from 'lucide-react';
+import { Send, AlertCircle, Loader2, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';

@@ -46,6 +46,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         <h1 className="text-xl font-semibold">צ'אט BUTI</h1>
       </div>
       
+      {/* Display pinned message as a banner above the chat */}
       <PinnedMessage 
         message={pinnedMessage}
         onManage={onManagePinnedMessage}
