@@ -94,6 +94,38 @@ export const createAdminUser = async (name: string, avatar: string = '😎', ema
   localStorage.setItem('tempMockAvatar', avatar);
   localStorage.setItem('tempMockUserId', userId);
   
+  // Create profile for the demo admin user in Supabase
+  try {
+    // First check if profile already exists
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    // Only create if it doesn't exist
+    if (!existingProfile) {
+      await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          name: name,
+          avatar: avatar
+        });
+        
+      // Also add admin role
+      await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'admin'
+        });
+    }
+  } catch (error) {
+    console.error('Error creating Supabase profile for demo user:', error);
+    // Continue anyway since we can still use the demo user in localStorage
+  }
+  
   // Dispatch a custom event to notify the auth context
   document.dispatchEvent(new Event('customStorageEvent'));
 };

@@ -181,6 +181,32 @@ export const useChat = () => {
         throw new Error("Invalid user ID. Please try logging in again.");
       }
       
+      // For demo users (which don't exist in Supabase auth), we need to create a profile first
+      // Check if the profile exists by trying to fetch it
+      const { data: existingProfile, error: profileCheckError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      // If profile doesn't exist and we're in demo mode, create one
+      if (!existingProfile && !profileCheckError) {
+        console.log("Creating profile for demo user:", user.id);
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            name: user.name,
+            avatar: user.avatar
+          });
+          
+        if (createProfileError) {
+          console.error("Error creating profile:", createProfileError);
+          // Continue anyway since the messages table might not require a profile
+        }
+      }
+      
+      // Now send the message
       const { error } = await supabase
         .from('messages')
         .insert({
