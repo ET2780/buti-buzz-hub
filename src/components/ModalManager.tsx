@@ -1,11 +1,10 @@
-
 import React from 'react';
-import { User } from '@/types';
+import { User, PinnedMessage } from '@/types';
 import SongModal from '@/components/SongModal';
 import ProfileModal from '@/components/ProfileModal';
-import UserProfileModal from '@/components/UserProfileModal';
-import PinnedMessageManager from '@/components/PinnedMessageManager';
+import PinnedMessageManager from '@/components/modals/PinnedMessageManager';
 import PerksManagement from '@/components/PerksManagement';
+import SongRequestManager from '@/components/SongRequestManager';
 
 interface ModalManagerProps {
   isSongModalOpen: boolean;
@@ -13,6 +12,7 @@ interface ModalManagerProps {
   isUserProfileModalOpen: boolean;
   isPinnedMessageModalOpen: boolean;
   isPerksModalOpen: boolean;
+  isSongRequestManagerOpen: boolean;
   selectedUser: User | null;
   pinnedMessage: string | null;
   closeSongModal: () => void;
@@ -20,7 +20,8 @@ interface ModalManagerProps {
   closeUserProfileModal: () => void;
   closePinnedMessageModal: () => void;
   closePerksModal: () => void;
-  onPinnedMessageUpdated: (message: string | null) => void;
+  closeSongRequestManager: () => void;
+  onPinnedMessageUpdated: (messages: PinnedMessage[] | null) => void;
   onPerksUpdated: () => void;
   isAdmin: boolean;
 }
@@ -31,6 +32,7 @@ const ModalManager: React.FC<ModalManagerProps> = ({
   isUserProfileModalOpen,
   isPinnedMessageModalOpen,
   isPerksModalOpen,
+  isSongRequestManagerOpen,
   selectedUser,
   pinnedMessage,
   closeSongModal,
@@ -38,6 +40,7 @@ const ModalManager: React.FC<ModalManagerProps> = ({
   closeUserProfileModal,
   closePinnedMessageModal,
   closePerksModal,
+  closeSongRequestManager,
   onPinnedMessageUpdated,
   onPerksUpdated,
   isAdmin
@@ -48,15 +51,11 @@ const ModalManager: React.FC<ModalManagerProps> = ({
         <SongModal isOpen={isSongModalOpen} onClose={closeSongModal} />
       )}
       
-      {isProfileModalOpen && (
-        <ProfileModal isOpen={isProfileModalOpen} onClose={closeProfileModal} />
-      )}
-      
-      {isUserProfileModalOpen && selectedUser && (
-        <UserProfileModal 
-          isOpen={isUserProfileModalOpen} 
-          onClose={closeUserProfileModal} 
-          user={selectedUser} 
+      {(isProfileModalOpen || isUserProfileModalOpen) && (
+        <ProfileModal 
+          isOpen={isProfileModalOpen || isUserProfileModalOpen} 
+          onClose={isProfileModalOpen ? closeProfileModal : closeUserProfileModal}
+          user={isUserProfileModalOpen ? selectedUser : undefined}
         />
       )}
       
@@ -64,7 +63,6 @@ const ModalManager: React.FC<ModalManagerProps> = ({
         <PinnedMessageManager
           isOpen={isPinnedMessageModalOpen}
           onClose={closePinnedMessageModal}
-          currentPinnedMessage={pinnedMessage}
           onMessageUpdated={onPinnedMessageUpdated}
         />
       )}
@@ -74,6 +72,13 @@ const ModalManager: React.FC<ModalManagerProps> = ({
           isOpen={isPerksModalOpen}
           onClose={closePerksModal}
           onPerksUpdated={onPerksUpdated}
+        />
+      )}
+
+      {isSongRequestManagerOpen && isAdmin && (
+        <SongRequestManager
+          isOpen={isSongRequestManagerOpen}
+          onClose={closeSongRequestManager}
         />
       )}
     </>

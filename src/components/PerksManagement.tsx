@@ -84,9 +84,9 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
       setNewPerk({ title: '', description: '', is_active: true });
       toast.success('ההטבה נוספה בהצלחה');
       onPerksUpdated(); // Notify parent to refresh perks
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Failed to add perk:', error);
-      const errorMessage = error.message || 'Failed to add perk';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add perk';
       toast.error(errorMessage);
       setError(errorMessage);
     } finally {
@@ -94,7 +94,7 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
     }
   };
 
-  const handleUpdatePerk = (id: string, field: keyof Perk, value: any) => {
+  const handleUpdatePerk = (id: string, field: keyof Perk, value: Perk[keyof Perk]) => {
     setPerks(
       perks.map((perk) =>
         perk.id === id ? { ...perk, [field]: value } : perk
@@ -118,9 +118,9 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
       setIsEditing(null);
       toast.success('ההטבה עודכנה בהצלחה');
       onPerksUpdated(); // Notify parent to refresh perks
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Failed to update perk:', error);
-      const errorMessage = error.message || 'Failed to update perk';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update perk';
       toast.error(errorMessage);
       setError(errorMessage);
     } finally {
@@ -142,9 +142,9 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
       
       toast.success(currentState ? 'ההטבה הושבתה' : 'ההטבה הופעלה');
       onPerksUpdated(); // Notify parent to refresh perks
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Failed to toggle perk state:', error);
-       const errorMessage = error.message || 'Failed to toggle perk state';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to toggle perk state';
       toast.error(errorMessage);
       setError(errorMessage);
     } finally {
@@ -163,9 +163,9 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
       setPerks(perks.filter((perk) => perk.id !== id));
       toast.success('ההטבה נמחקה בהצלחה');
       onPerksUpdated(); // Notify parent to refresh perks
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Failed to delete perk:', error);
-      const errorMessage = error.message || 'Failed to delete perk';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete perk';
       toast.error(errorMessage);
       setError(errorMessage);
     } finally {
@@ -174,7 +174,9 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
   };
 
   const handleClose = () => {
-    onPerksUpdated();
+    if (onPerksUpdated) {
+      onPerksUpdated();
+    }
     onClose();
   };
 
@@ -328,12 +330,6 @@ const PerksManagement: React.FC<PerksManagementProps> = ({
             )}
           </div>
         </div>
-
-        <DialogFooter className="flex justify-between">
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
-            סגור
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

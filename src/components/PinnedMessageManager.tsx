@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Pin, Save, Trash, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,14 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { PostgrestError } from '@supabase/supabase-js';
+
+interface SystemMessage {
+  id: string;
+  text: string;
+  created_at: string;
+  updated_at: string;
+}
 
 interface PinnedMessageManagerProps {
   isOpen: boolean;
@@ -37,10 +44,8 @@ const PinnedMessageManager: React.FC<PinnedMessageManagerProps> = ({
 
     setIsSaving(true);
     try {
-      // Update or insert the pinned message in Supabase (system messages table)
-      // Using from() with a string literal to work around TypeScript issues
       const { error } = await supabase
-        .from('system_messages' as any)
+        .from('system_messages')
         .upsert({ 
           id: 'pinned', 
           text: message.trim(),
@@ -52,7 +57,7 @@ const PinnedMessageManager: React.FC<PinnedMessageManagerProps> = ({
       onMessageUpdated(message.trim());
       toast.success('הודעה נעוצה עודכנה בהצלחה');
       onClose();
-    } catch (error) {
+    } catch (error: PostgrestError | unknown) {
       console.error('Error saving pinned message:', error);
       toast.error('שגיאה בשמירת ההודעה');
     } finally {
@@ -63,9 +68,8 @@ const PinnedMessageManager: React.FC<PinnedMessageManagerProps> = ({
   const handleDelete = async () => {
     setIsSaving(true);
     try {
-      // Delete the pinned message
       const { error } = await supabase
-        .from('system_messages' as any)
+        .from('system_messages')
         .delete()
         .eq('id', 'pinned');
       
@@ -74,7 +78,7 @@ const PinnedMessageManager: React.FC<PinnedMessageManagerProps> = ({
       onMessageUpdated(null);
       toast.success('הודעה נעוצה הוסרה בהצלחה');
       onClose();
-    } catch (error) {
+    } catch (error: PostgrestError | unknown) {
       console.error('Error deleting pinned message:', error);
       toast.error('שגיאה במחיקת ההודעה');
     } finally {

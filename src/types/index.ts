@@ -1,12 +1,30 @@
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
-export interface User {
+export interface User extends Partial<SupabaseUser> {
   id: string;
-  name: string;
-  avatar: string;
-  isAdmin: boolean;
-  email?: string | null;
+  username?: string;
+  avatar?: string;
+  isAdmin?: boolean;
   tags?: string[];
   customStatus?: string;
+  isTemporary?: boolean;
+  user_metadata?: {
+    isTemporary?: boolean;
+    username?: string;
+    isAdmin?: boolean;
+    name?: string;
+    avatar?: string;
+    tags?: string[];
+    customStatus?: string;
+    permissions?: {
+      isAdmin?: boolean;
+      canManagePerks?: boolean;
+      canManageUsers?: boolean;
+      canManagePinnedMessages?: boolean;
+      canSuggestSongs?: boolean;
+      canManageSongs?: boolean;
+    };
+  };
 }
 
 export interface Perk {
@@ -20,12 +38,23 @@ export interface Perk {
 
 export interface Message {
   id: string;
-  sender: User;
   text: string;
   timestamp: Date;
   isCurrentUser: boolean;
   isAutomated?: boolean;
-  isPinned?: boolean;
+  sender: {
+    id: string;
+    name: string;
+    avatar: string;
+    isAdmin: boolean;
+    tags: string[];
+    customStatus?: string;
+    user_metadata?: {
+      permissions?: {
+        isAdmin?: boolean;
+      };
+    };
+  };
 }
 
 export interface DailyPrompt {
@@ -39,4 +68,10 @@ export interface SystemMessage {
   text: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface PinnedMessage {
+  id: string;
+  message: string;
+  created_at: string;
 }

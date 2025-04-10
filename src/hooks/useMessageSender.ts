@@ -1,93 +1,54 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@/types';
+import { useAuth } from './useAuth';
 import { toast } from 'sonner';
-import { validate as isUuid } from 'uuid';
 
-export const useMessageSender = (user: User | null) => {
+export function useMessageSender() {
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
-  
-  // Helper function to ensure user profile exists
-  const ensureUserProfileExists = async (user: User) => {
-    try {
-      // Check if profile exists first
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      // If profile doesn't exist, create one
-      if (!existingProfile) {
-        console.log("Creating profile for user:", user.id);
-        await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            name: user.name,
-            avatar: user.avatar,
-            tags: user.tags || []
-          });
-      }
-    } catch (error) {
-      console.error("Error checking/creating profile:", error);
-      // Continue anyway since we've removed the foreign key constraint
-      // This shouldn't block message sending
-    }
+  const { user } = useAuth();
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
   };
-  
+
   const sendMessage = async () => {
-    if (!user || !newMessage.trim() || isSending) return;
-    
+    if (!user?.id || !newMessage.trim()) return;
+
     setIsSending(true);
-    
     try {
-      console.log("Sending message as user:", user.id);
-      
-      // Validate UUID properly, using the uuid package validator
-      if (!user.id || !isUuid(user.id)) {
-        console.error("Invalid UUID format for user ID:", user.id);
-        throw new Error("Invalid user ID. Please try logging in again.");
-      }
-      
-      // Ensure user profile exists in the database for demo users
-      await ensureUserProfileExists(user);
-      
-      // Now send the message
+      // Get user profile data
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name, avatar, tags, custom_status')
+        .eq('id', user.id)
+        .single();
+
       const { error } = await supabase
         .from('messages')
         .insert({
+          sender_id: user.id,
           text: newMessage.trim(),
-          sender_id: user.id
+          created_at: new Date().toISOString()
         });
-      
-      if (error) {
-        console.error('Error details:', error);
-        throw error;
-      }
-      
-      // Clear input field after sending
+
+      if (error) throw error;
       setNewMessage('');
     } catch (error: any) {
       console.error('Error sending message:', error);
-      toast.error(`Failed to send message: ${error.message || 'Unknown error'}`);
+      toast.error('Failed to send message');
     } finally {
       setIsSending(false);
     }
   };
-  
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewMessage(e.target.value);
-  };
-  
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey && newMessage.trim()) {
+      e.preventDefault();
       sendMessage();
     }
   };
-  
+
   return {
     newMessage,
     isSending,
@@ -95,4 +56,4 @@ export const useMessageSender = (user: User | null) => {
     handleKeyDown,
     sendMessage
   };
-};
+}

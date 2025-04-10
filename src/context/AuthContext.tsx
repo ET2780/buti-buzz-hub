@@ -1,259 +1,331 @@
-
-import { createContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '@/types';
+import { createContext, useContext, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
 import { toast } from 'sonner';
 import { signOutUser, checkForDemoLogin } from '@/utils/authUtils';
 import { setupAuthListeners } from '@/utils/authInitializer';
-import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
-interface AuthContextType {
-  user: User | null;
-  isAdmin: boolean;
-  isLoading: boolean;
-  signOut: () => Promise<void>;
-  updateProfile: (updates: Partial<User>) => Promise<void>;
+// Function to generate UUID v4
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+interface AuthState {
+  user: User | null;
+  isAdmin: boolean;
+  profile: {
+    username: string;
+    avatar_url?: string;
+    [key: string]: any;
+  } | null;
+  isLoading: boolean;
+}
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+interface AuthContextType extends AuthState {
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  updateProfile: (updates: Partial<AuthState['profile']>) => Promise<void>;
+  createTemporaryUser: () => Promise<void>;
+  cleanupTemporaryUser: (userId: string) => Promise<void>;
+}
 
-  // Setup Supabase auth listener
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    isAdmin: false,
+    profile: null,
+    isLoading: true,
+  });
+
+  // Cleanup temporary user data and messages
+  const cleanupTemporaryUser = async (userId: string) => {
+    try {
+      // Delete user's messages
+      await supabase
+        .from('messages')
+        .delete()
+        .eq('user_id', userId)
+        .eq('is_temporary', true);
+
+      // Remove from localStorage
+      localStorage.removeItem('buti_user');
+      localStorage.removeItem('buti_network_connected');
+      
+      // Clear auth state
+      setAuthState({
+        user: null,
+        isAdmin: false,
+        profile: null,
+        isLoading: false
+      });
+
+      toast.success('התנתקת מרשת BUTI');
+    } catch (error) {
+      console.error('Error cleaning up temporary user:', error);
+    }
+  };
+
   useEffect(() => {
-    // Set up Supabase auth subscription
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Supabase auth event:', event, session);
-        
-        if (session) {
-          try {
-            // Check if user has admin role in Supabase
-            const { data: roles, error } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', session.user.id);
-              
-            if (error) {
-              console.error('Error fetching user roles:', error);
-            }
-            
-            const isUserAdmin = roles?.some(r => r.role === 'admin') || false;
-            
-            // Get user profile including tags
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('name, avatar, tags')
-              .eq('id', session.user.id)
-              .maybeSingle();
-              
-            if (profileError) {
-              console.error('Error fetching user profile:', profileError);
-            }
-            
-            const userData: User = {
-              id: session.user.id,
-              name: profile?.name || session.user.user_metadata.name || session.user.email?.split('@')[0] || 'User',
-              avatar: profile?.avatar || session.user.user_metadata.avatar || '😊',
-              isAdmin: isUserAdmin,
-              email: session.user.email,
-              tags: profile?.tags || []
-            };
-            
-            setUser(userData);
-            setIsAdmin(isUserAdmin);
-            console.log('Set authenticated user:', userData);
-          } catch (error) {
-            console.error('Error setting authenticated user:', error);
-          }
-        }
-      }
-    );
-
-    // Check for initial session
-    const initializeAuth = async () => {
+    // Check for temporary user first
+    const tempUserStr = localStorage.getItem('buti_user');
+    if (tempUserStr) {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const tempUser = JSON.parse(tempUserStr);
         
-        if (session) {
-          // User is logged in with Supabase
-          const { data: roles, error } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id);
-            
-          if (error) {
-            console.error('Error fetching user roles:', error);
-          }
-          
-          const isUserAdmin = roles?.some(r => r.role === 'admin') || false;
-          
-          // Get user profile including tags
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('name, avatar, tags')
-            .eq('id', session.user.id)
-            .maybeSingle();
-            
-          if (profileError) {
-            console.error('Error fetching user profile:', profileError);
-          }
-          
-          const userData: User = {
-            id: session.user.id,
-            name: profile?.name || session.user.user_metadata.name || session.user.email?.split('@')[0] || 'User',
-            avatar: profile?.avatar || session.user.user_metadata.avatar || '😊',
-            isAdmin: isUserAdmin,
-            email: session.user.email,
-            tags: profile?.tags || []
-          };
-          
-          setUser(userData);
-          setIsAdmin(isUserAdmin);
-          console.log('Initial auth: Supabase user found', userData);
-        } else {
-          // Fallback to demo login
-          console.log('No Supabase session, checking for demo login');
-          const demoUser = checkForDemoLogin();
-          if (demoUser) {
-            setUser(demoUser);
-            setIsAdmin(demoUser.isAdmin);
-            console.log('Demo user found:', demoUser);
-          } else {
-            setUser(null);
-            setIsAdmin(false);
-          }
+        // Check if still connected to BUTI network
+        const isConnected = localStorage.getItem('buti_network_connected');
+        if (!isConnected && tempUser.isTemporary) {
+          // If not connected to BUTI network and is a temporary user, clean up
+          cleanupTemporaryUser(tempUser.id);
+          return;
         }
+
+        setAuthState({
+          user: {
+            id: tempUser.id,
+            email: null,
+            phone: null,
+            created_at: tempUser.createdAt,
+            user_metadata: {
+              isTemporary: true,
+              username: tempUser.username
+            }
+          } as User,
+          isAdmin: false,
+          profile: {
+            username: tempUser.username,
+            isTemporary: true
+          },
+          isLoading: false
+        });
       } catch (error) {
-        console.error("Error in initializeAuth:", error);
-        // Fallback to demo login on error
-        const demoUser = checkForDemoLogin();
-        if (demoUser) {
-          setUser(demoUser);
-          setIsAdmin(demoUser.isAdmin);
-        }
-      } finally {
-        setIsLoading(false);
+        console.error('Error parsing temporary user:', error);
       }
-    };
+    }
 
-    initializeAuth();
-
-    // Add the localStorage event listener for demo login
-    const handleStorageChange = (event: StorageEvent) => {
-      console.log("Storage event detected:", event.key);
-      if (event.key === 'tempMockEmail') {
-        console.log("Storage event detected for tempMockEmail with value:", event.newValue);
-        const demoUser = checkForDemoLogin();
-        if (demoUser) {
-          setUser(demoUser);
-          setIsAdmin(demoUser.isAdmin);
-        }
+    // Check Supabase auth state
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setAuthState(prev => ({
+          ...prev,
+          user: session.user,
+          isLoading: false
+        }));
+        checkUserRole(session.user.id);
+        loadUserProfile(session.user.id);
+      } else {
+        setAuthState(prev => ({
+          ...prev,
+          isLoading: false
+        }));
       }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Add direct event listener for localStorage updates in the same window
-    const handleCustomStorageEvent = () => {
-      console.log("Custom storage event detected");
-      const demoUser = checkForDemoLogin();
-      if (demoUser) {
-        setUser(demoUser);
-        setIsAdmin(demoUser.isAdmin);
-      }
-    };
-    
-    document.addEventListener('customStorageEvent', handleCustomStorageEvent);
+    });
 
-    // Return cleanup function
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setAuthState(prev => ({
+          ...prev,
+          user: session.user
+        }));
+        checkUserRole(session.user.id);
+        loadUserProfile(session.user.id);
+      } else {
+        setAuthState({
+          user: null,
+          isAdmin: false,
+          profile: null,
+          isLoading: false
+        });
+      }
+    });
+
     return () => {
-      subscription?.unsubscribe();
-      window.removeEventListener('storage', handleStorageChange);
-      document.removeEventListener('customStorageEvent', handleCustomStorageEvent);
+      subscription.unsubscribe();
     };
   }, []);
 
+  const checkUserRole = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .single();
+
+    if (!error && data) {
+      setAuthState(prev => ({
+        ...prev,
+        isAdmin: data.role === 'admin'
+      }));
+    }
+  };
+
+  const loadUserProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (!error && data) {
+      setAuthState(prev => ({
+        ...prev,
+        profile: data
+      }));
+    }
+  };
+
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw error;
+    }
+  };
+
   const signOut = async () => {
-    try {
-      // Sign out from Supabase
+    // If temporary user, clean up their data
+    if (authState.user?.user_metadata?.isTemporary) {
+      await cleanupTemporaryUser(authState.user.id);
+    } else {
+      // Regular Supabase signout
       await supabase.auth.signOut();
-      
-      // Also clean up local storage for demo login
-      await signOutUser();
-      
-      setUser(null);
-      setIsAdmin(false);
-      toast.success('התנתקת בהצלחה');
-      
-      // Navigate to login page after sign out
-      window.location.href = '/login';
-    } catch (error: any) {
-      toast.error(error.message || 'התנתקות נכשלה');
     }
+    
+    localStorage.removeItem('buti_user');
+    setAuthState({
+      user: null,
+      isAdmin: false,
+      profile: null,
+      isLoading: false
+    });
   };
 
-  const updateProfile = async (updates: Partial<User>) => {
-    try {
-      if (!user?.id) throw new Error('No user logged in');
+  const updateProfile = async (updates: Partial<AuthState['profile']>) => {
+    if (!authState.user) {
+      throw new Error('No user logged in');
+    }
+
+    if (authState.user.user_metadata?.isTemporary) {
+      // Update temporary user
+      const tempUser = {
+        id: authState.user.id,
+        username: updates.username || authState.profile?.username,
+        isTemporary: true,
+        createdAt: authState.user.created_at
+      };
       
-      // For Supabase users, update metadata
-      const { data: session } = await supabase.auth.getSession();
-      if (session?.session) {
-        // Update user metadata in Supabase
-        const { error: authError } = await supabase.auth.updateUser({
-          data: {
-            name: updates.name || user.name,
-            avatar: updates.avatar || user.avatar
-          }
-        });
-        
-        if (authError) throw authError;
-        
-        // Update profile in profiles table including tags
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            name: updates.name || user.name,
-            avatar: updates.avatar || user.avatar,
-            tags: updates.tags || user.tags || [],
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-          
-        if (profileError) throw profileError;
-      } else {
-        // For simple name-only login, just update the local state
-        if (updates.name) {
-          localStorage.setItem('tempMockGuestName', updates.name);
+      localStorage.setItem('buti_user', JSON.stringify(tempUser));
+      
+      setAuthState(prev => ({
+        ...prev,
+        profile: {
+          ...prev.profile,
+          ...updates,
+          isTemporary: true
         }
-        if (updates.avatar) {
-          localStorage.setItem('tempMockAvatar', updates.avatar);
-        }
-        // We can't store tags for demo users in this implementation
+      }));
+      
+      return;
+    }
+
+    // Update Supabase profile
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: authState.user.id,
+        ...updates,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    setAuthState(prev => ({
+      ...prev,
+      profile: {
+        ...prev.profile,
+        ...updates
       }
-      
-      // Update local state
-      setUser({ ...user, ...updates });
-      
-      toast.success('Profile updated successfully');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update profile');
-    }
+    }));
   };
 
-  const value = {
-    user,
-    isAdmin,
-    isLoading,
-    signOut,
-    updateProfile
+  const createTemporaryUser = async () => {
+    const tempId = uuidv4(); // Generate proper UUID
+    const timestamp = Date.now();
+    const tempUser = {
+      id: tempId,
+      username: `אורח_${timestamp}`,
+      isTemporary: true,
+      createdAt: new Date().toISOString(),
+      lastActive: timestamp
+    };
+
+    localStorage.setItem('buti_user', JSON.stringify(tempUser));
+
+    setAuthState({
+      user: {
+        id: tempId,
+        email: null,
+        phone: null,
+        created_at: tempUser.createdAt,
+        user_metadata: {
+          isTemporary: true,
+          username: tempUser.username,
+          lastActive: timestamp
+        }
+      } as User,
+      isAdmin: false,
+      profile: {
+        username: tempUser.username,
+        isTemporary: true
+      },
+      isLoading: false
+    });
+
+    // Set up periodic activity update
+    const updateActivity = () => {
+      const currentUser = localStorage.getItem('buti_user');
+      if (currentUser) {
+        const userData = JSON.parse(currentUser);
+        userData.lastActive = Date.now();
+        localStorage.setItem('buti_user', JSON.stringify(userData));
+      }
+    };
+
+    // Update activity every minute
+    const activityInterval = setInterval(updateActivity, 60000);
+    return () => clearInterval(activityInterval);
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+  return (
+    <AuthContext.Provider value={{
+      ...authState,
+      signIn,
+      signOut,
+      updateProfile,
+      createTemporaryUser,
+      cleanupTemporaryUser,
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
 
-export { AuthContext };
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}

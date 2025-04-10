@@ -1,7 +1,14 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+
+interface SystemMessage {
+  id: string;
+  text: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export const usePinnedMessage = () => {
   const [pinnedMessage, setPinnedMessage] = useState<string | null>(null);
@@ -10,20 +17,17 @@ export const usePinnedMessage = () => {
   useEffect(() => {
     const fetchPinnedMessage = async () => {
       try {
-        // Explicitly type the response data
         const { data, error } = await supabase
-          .from('system_messages' as any)
+          .from('system_messages')
           .select('text')
           .eq('id', 'pinned')
           .maybeSingle();
           
         if (error) throw error;
         
-        // Comprehensive null checking to fix TypeScript errors
         if (data && 'text' in data && typeof data.text === 'string') {
           setPinnedMessage(data.text);
         } else {
-          // If no data is found, ensure pinnedMessage is null
           setPinnedMessage(null);
         }
       } catch (error) {
@@ -42,9 +46,9 @@ export const usePinnedMessage = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'system_messages' },
-        (payload) => {
-          const newData = payload.new as any;
-          const oldData = payload.old as any;
+        (payload: RealtimePostgresChangesPayload<SystemMessage>) => {
+          const newData = payload.new;
+          const oldData = payload.old;
           
           if (newData && newData.id === 'pinned' && typeof newData.text === 'string') {
             setPinnedMessage(newData.text);

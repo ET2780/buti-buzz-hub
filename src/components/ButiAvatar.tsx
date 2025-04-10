@@ -1,46 +1,37 @@
-
 import React from 'react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import Logo from './Logo';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { User } from '@/types';
 
-interface ButiAvatarProps {
-  avatar?: string;
-  name?: string;
-  isAdmin?: boolean;
-  size?: 'sm' | 'md' | 'lg'; 
-}
+export const ButiAvatar = ({ user }: { user: User | null }) => {
+  // Check admin status from both possible locations
+  const isAdmin = user?.isAdmin || user?.user_metadata?.permissions?.isAdmin === true;
+  
+  // Get name from both possible locations
+  const name = user?.user_metadata?.name || user?.username || 'אורח';
+  
+  // Get avatar from both possible locations
+  const avatar = user?.user_metadata?.avatar || user?.avatar || '😊';
 
-const ButiAvatar: React.FC<ButiAvatarProps> = ({ 
-  avatar = '', 
-  name = '', 
-  isAdmin = false,
-  size = 'md'
-}) => {
-  const sizeClasses = {
-    sm: 'h-8 w-8',
-    md: 'h-10 w-10',
-    lg: 'h-12 w-12',
-  };
-
-  // For BUTI staff/admin
-  if (isAdmin || avatar === 'BUTI') {
+  if (isAdmin) {
     return (
-      <Avatar className={`${sizeClasses[size]} bg-white flex items-center justify-center`}>
-        <div className="scale-110 flex items-center justify-center">
-          <Logo size="small" useImage={true} />
-        </div>
+      <Avatar>
+        <AvatarImage src="/buti-logo.png" alt={name} className="object-contain" />
+        <AvatarFallback>
+          <img src="/buti-logo.png" alt={name} className="w-full h-full object-contain" />
+        </AvatarFallback>
       </Avatar>
     );
   }
 
-  // Regular user with emoji avatar
   return (
-    <Avatar className={sizeClasses[size]}>
-      <AvatarFallback className="text-lg">
-        {avatar || name.charAt(0).toUpperCase()}
-      </AvatarFallback>
+    <Avatar>
+      {avatar.startsWith('http') ? (
+        <AvatarImage src={avatar} alt={name} />
+      ) : (
+        <AvatarFallback className="text-xl">
+          {avatar}
+        </AvatarFallback>
+      )}
     </Avatar>
   );
 };
-
-export default ButiAvatar;

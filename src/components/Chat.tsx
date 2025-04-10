@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Message, User } from '@/types';
 import { Send, AlertCircle, Loader2, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import ButiAvatar from './ButiAvatar';
+import { ButiAvatar } from './ButiAvatar';
+import { useAuth } from '@/hooks/useAuth';
+import ProfileModal from './ProfileModal';
 
 interface ChatProps {
   messages: Message[];
@@ -19,7 +20,6 @@ interface ChatProps {
   connectionError: string | null;
   isConnecting: boolean;
   isSending?: boolean;
-  onUserAvatarClick?: (user: User) => void;
 }
 
 const Chat: React.FC<ChatProps> = ({
@@ -32,8 +32,18 @@ const Chat: React.FC<ChatProps> = ({
   connectionError,
   isConnecting,
   isSending = false,
-  onUserAvatarClick
 }) => {
+  const { user } = useAuth();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setCurrentUser(user);
+    }
+  }, [user]);
+
   const formatTime = (date: Date) => {
     return new Date(date).toLocaleTimeString('he-IL', {
       hour: '2-digit',
@@ -41,14 +51,55 @@ const Chat: React.FC<ChatProps> = ({
     });
   };
 
-  const handleAvatarClick = (user: User) => {
-    if (onUserAvatarClick) {
-      onUserAvatarClick(user);
+  const handleAvatarClick = (message: Message) => {
+    if (message.sender) {
+      setSelectedUser({
+        ...message.sender,
+        user_metadata: {
+          name: message.sender.name,
+          avatar: message.sender.avatar,
+          tags: message.sender.tags,
+          customStatus: message.sender.customStatus
+        }
+      });
+      setShowProfileModal(true);
     }
   };
 
+  // Listen for profile updates to force a refresh of the component
+  useEffect(() => {
+    const handleProfileUpdated = (event: CustomEvent<{user: User}>) => {
+      console.log('Profile updated event received in Chat component:', event.detail);
+      setCurrentUser(event.detail.user);
+    };
+
+    window.addEventListener('profile-updated', handleProfileUpdated as EventListener);
+    
+    return () => {
+      window.removeEventListener('profile-updated', handleProfileUpdated as EventListener);
+    };
+  }, []);
+
+  // Update message sender data with current user data
+  const updatedMessages = messages.map(message => {
+    if (message.isCurrentUser && currentUser) {
+      return {
+        ...message,
+        sender: {
+          ...message.sender,
+          name: currentUser.username || currentUser.user_metadata?.name || '',
+          avatar: currentUser.avatar || currentUser.user_metadata?.avatar || '',
+          tags: currentUser.tags || currentUser.user_metadata?.tags || [],
+          customStatus: currentUser.customStatus || currentUser.user_metadata?.customStatus || '',
+          isAdmin: currentUser.isAdmin || false
+        }
+      };
+    }
+    return message;
+  });
+
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col min-h-0" dir="rtl">
       {connectionError && (
         <Alert variant="destructive" className="m-4">
           <AlertCircle className="h-4 w-4" />
@@ -58,149 +109,78 @@ const Chat: React.FC<ChatProps> = ({
       
       <div 
         ref={chatContainerRef}
-        className="flex-1 p-4 overflow-y-auto"
+        className="flex-1 overflow-y-auto p-4 space-y-4"
       >
-        {messages.length === 0 ? (
-          <div className="text-center text-muted-foreground py-10">
-            {connectionError 
-              ? "לא ניתן לטעון הודעות כרגע." 
-              : isConnecting ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-[100px]" />
-                      <Skeleton className="h-12 w-[200px]" />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-end gap-2">
-                    <div className="space-y-2">
-                      <Skeleton className="h-12 w-[150px]" />
-                    </div>
-                  </div>
-                </div>
-              ) : "אין הודעות עדיין. התחילו שיחה!"}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.isAutomated 
-                    ? "justify-center" 
-                    : message.isCurrentUser 
-                      ? "justify-end" 
-                      : "justify-start"
-                }`}
+        {updatedMessages.map((message, index) => (
+          <div
+            key={index}
+            className="flex justify-start"
+          >
+            <div className="flex items-start gap-2 max-w-[80%] flex-row">
+              <div 
+                className="cursor-pointer"
+                onClick={() => handleAvatarClick(message)}
               >
-                {message.isAutomated ? (
-                  <div className="bg-muted/50 rounded-lg p-3 max-w-[80%] border border-border shadow-sm flex items-center gap-2">
-                    <Bot size={16} className="text-primary" />
-                    <div>
-                      <p className="font-medium text-sm">{message.text}</p>
-                      <div className="text-xs opacity-70 text-right mt-1">
-                        {formatTime(message.timestamp)}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {!message.isCurrentUser && (
-                      <div 
-                        className="flex-shrink-0 mr-2 cursor-pointer" 
-                        onClick={() => handleAvatarClick(message.sender)}
-                      >
-                        <ButiAvatar
-                          avatar={message.sender.avatar}
-                          name={message.sender.name}
-                          isAdmin={message.sender.isAdmin}
-                          size="sm"
-                        />
-                      </div>
-                    )}
-                    
-                    <div className="max-w-[70%]">
-                      {!message.isCurrentUser && (
-                        <div className="mb-1">
-                          <div className="text-xs text-muted-foreground font-medium flex items-center flex-wrap">
-                            <span 
-                              className="cursor-pointer hover:underline"
-                              onClick={() => handleAvatarClick(message.sender)}
-                            >
-                              {message.sender.name}
-                            </span>
-                            
-                            {message.sender.customStatus && (
-                              <span className="text-[10px] text-muted-foreground mx-1">
-                                • {message.sender.customStatus}
-                              </span>
-                            )}
-                            
-                            {message.sender.tags && message.sender.tags.length > 0 && (
-                              <div className="flex gap-1 mr-1 flex-wrap">
-                                {message.sender.tags.slice(0, 2).map(tag => (
-                                  <Badge key={tag} variant="outline" className="text-[10px] px-1 py-0">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                                {message.sender.tags.length > 2 && (
-                                  <Badge variant="outline" className="text-[10px] px-1 py-0">
-                                    +{message.sender.tags.length - 2}
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div
-                        className={`rounded-lg p-3 ${
-                          message.isCurrentUser
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted"
-                        }`}
-                      >
-                        <p>{message.text}</p>
-                        <div className="text-xs opacity-70 text-right mt-1">
-                          {formatTime(message.timestamp)}
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
+                <ButiAvatar
+                  user={{
+                    id: message.sender.id,
+                    user_metadata: {
+                      name: message.sender.name,
+                      avatar: message.sender.avatar,
+                      tags: message.sender.tags,
+                      customStatus: message.sender.customStatus,
+                      permissions: {
+                        isAdmin: message.sender.isAdmin
+                      }
+                    }
+                  }}
+                />
               </div>
-            ))}
+              <div className="flex flex-col items-start">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{message.sender.name}</span>
+                  {message.sender.isAdmin && (
+                    <Badge variant="secondary">Admin</Badge>
+                  )}
+                </div>
+                <div className="bg-muted rounded-lg p-2">
+                  {message.text}
+                </div>
+                <span className="text-xs text-muted-foreground mt-1">
+                  {formatTime(message.timestamp)}
+                </span>
+              </div>
+            </div>
           </div>
-        )}
+        ))}
       </div>
-      
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex items-center gap-2">
+
+      <div className="p-4 border-t">
+        <div className="flex gap-2">
           <Input
-            type="text"
             value={newMessage}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder={connectionError ? "לא ניתן לשלוח הודעות כרגע" : "הקלידו הודעה..."}
-            className="flex-1 rounded-full"
-            disabled={!!connectionError || isSending}
+            placeholder="הקלד הודעה..."
+            disabled={isConnecting || isSending}
           />
           <Button
             onClick={sendMessage}
-            disabled={!newMessage.trim() || !!connectionError || isSending}
-            className="rounded-full"
-            size="icon"
+            disabled={!newMessage.trim() || isConnecting || isSending}
           >
-            {isSending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
       </div>
+
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => {
+          setShowProfileModal(false);
+          setSelectedUser(null);
+        }}
+        user={selectedUser}
+      />
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { createAdminUser } from '@/utils/authUtils';
 import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
+import { AuthError } from '@supabase/supabase-js';
 
 const LoginForm = () => {
   const [name, setName] = useState('');
@@ -59,9 +59,9 @@ const LoginForm = () => {
               createAdminUser(name, randomAvatar, email);
               navigate('/buti');
             }, 2000);
-          } catch (error: any) {
+          } catch (error: AuthError | unknown) {
             console.error('Password reset error:', error);
-            toast.error(error.message || 'שגיאה בשליחת קישור לאיפוס סיסמה');
+            toast.error(error instanceof AuthError ? error.message : 'שגיאה בשליחת קישור לאיפוס סיסמה');
             return;
           }
         } else {
@@ -88,9 +88,9 @@ const LoginForm = () => {
               toast.success('התחברת בהצלחה');
               navigate('/buti');
             }
-          } catch (error: any) {
+          } catch (error: AuthError | unknown) {
             console.error('Login error:', error);
-            toast.error(error.message || 'אימייל או סיסמה שגויים');
+            toast.error(error instanceof AuthError ? error.message : 'אימייל או סיסמה שגויים');
             setIsLoading(false);
             return;
           }

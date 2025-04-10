@@ -65,6 +65,7 @@ export type Database = {
           name: string | null
           tags: string[] | null
           updated_at: string
+          custom_status: string | null
         }
         Insert: {
           avatar?: string | null
@@ -73,6 +74,7 @@ export type Database = {
           name?: string | null
           tags?: string[] | null
           updated_at?: string
+          custom_status?: string | null
         }
         Update: {
           avatar?: string | null
@@ -81,6 +83,7 @@ export type Database = {
           name?: string | null
           tags?: string[] | null
           updated_at?: string
+          custom_status?: string | null
         }
         Relationships: []
       }

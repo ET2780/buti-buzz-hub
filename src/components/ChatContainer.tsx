@@ -1,8 +1,6 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Message, User } from '@/types';
 import Chat from '@/components/Chat';
-import PinnedMessage from '@/components/PinnedMessage';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -13,9 +11,7 @@ interface ChatContainerProps {
   connectionError: string | null;
   isLoadingChat: boolean;
   isSending: boolean;
-  pinnedMessage: string | null;
   onUserAvatarClick: (user: User) => void;
-  onManagePinnedMessage?: () => void;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -27,9 +23,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   connectionError,
   isLoadingChat,
   isSending,
-  pinnedMessage,
   onUserAvatarClick,
-  onManagePinnedMessage
 }) => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -41,16 +35,10 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   }, [messages]);
 
   return (
-    <div className="flex-1 flex flex-col h-full">
-      <div className="p-4 border-b border-border">
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="flex-shrink-0 p-4 border-b border-border">
         <h1 className="text-xl font-semibold">צ'אט BUTI</h1>
       </div>
-      
-      {/* Display pinned message as a banner above the chat */}
-      <PinnedMessage 
-        message={pinnedMessage}
-        onManage={onManagePinnedMessage}
-      />
       
       <Chat
         messages={messages}
