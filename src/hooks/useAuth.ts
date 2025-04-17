@@ -140,18 +140,49 @@ export function useAuth() {
     return `${randomPrefix} ${randomSuffix}`;
   };
 
+  const getNextGuestNumber = async (): Promise<number> => {
+    try {
+      // Get all profiles with names starting with 'אורח'
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('name')
+        .ilike('name', 'אורח%');
+
+      if (error) {
+        console.error('Error fetching guest profiles:', error);
+        return 1; // Fallback to 1 if there's an error
+      }
+
+      // Extract numbers from guest names
+      const numbers = profiles
+        ?.map(profile => {
+          const match = profile.name.match(/אורח(\d+)/i);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(num => !isNaN(num)) || [];
+
+      // Find the next available number
+      const maxNumber = Math.max(0, ...numbers);
+      return maxNumber + 1;
+    } catch (error) {
+      console.error('Error in getNextGuestNumber:', error);
+      return 1; // Fallback to 1 if there's an error
+    }
+  };
+
   const createTemporaryUser = async () => {
     try {
-      // Generate a temporary user ID and amusing name
+      // Generate a temporary user ID and get the next guest number
       const tempUserId = crypto.randomUUID();
-      const amusingName = generateAmusingName();
+      const guestNumber = await getNextGuestNumber();
+      const guestName = `אורח${guestNumber}`;
       
       // Create a temporary user profile
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
           id: tempUserId,
-          name: amusingName,
+          name: guestName,
           avatar: '😊',
           tags: ['guest'],
           custom_status: 'אורח'
@@ -165,7 +196,7 @@ export function useAuth() {
           user_metadata: {
             isTemporary: true,
             isAdmin: false,
-            name: amusingName,
+            name: guestName,
             avatar: '😊',
             tags: ['guest'],
             customStatus: 'אורח',
@@ -192,7 +223,7 @@ export function useAuth() {
         user_metadata: {
           isTemporary: true,
           isAdmin: false,
-          name: amusingName,
+          name: guestName,
           avatar: '😊',
           tags: ['guest'],
           customStatus: 'אורח',
@@ -210,37 +241,10 @@ export function useAuth() {
 
       setUser(tempUser);
       localStorage.setItem('temp_user_id', tempUserId);
-      
       return tempUserId;
     } catch (error) {
-      console.error('Error creating temporary user:', error);
-      // Even if there's an error, we'll create a temporary user in memory
-      const tempUserId = crypto.randomUUID();
-      const amusingName = generateAmusingName();
-      const tempUser = {
-        id: tempUserId,
-        user_metadata: {
-          isTemporary: true,
-          isAdmin: false,
-          name: amusingName,
-          avatar: '😊',
-          tags: ['guest'],
-          customStatus: 'אורח',
-          permissions: {
-            canManagePerks: false,
-            canManageSongs: false,
-            canManagePinnedMessages: false,
-            canManageUsers: false,
-            canEditProfile: true,
-            canWriteMessages: true,
-            canSuggestSongs: true
-          }
-        }
-      } as ExtendedUser;
-
-      setUser(tempUser);
-      localStorage.setItem('temp_user_id', tempUserId);
-      return tempUserId;
+      console.error('Error in createTemporaryUser:', error);
+      throw error;
     }
   };
 
@@ -272,7 +276,7 @@ export function useAuth() {
         if (profileError) throw profileError;
 
         // Update the user state
-        setUser({
+        const updatedUser = {
           ...user,
           user_metadata: {
             ...user.user_metadata,
@@ -281,8 +285,10 @@ export function useAuth() {
             tags: profile.tags,
             customStatus: profile.customStatus
           }
-        });
-        return;
+        } as ExtendedUser;
+
+        setUser(updatedUser);
+        return updatedUser;
       }
 
       // For regular users, update both auth and profiles
@@ -305,7 +311,7 @@ export function useAuth() {
       if (profileError) throw profileError;
 
       // Update the user state
-      setUser({
+      const updatedUser = {
         ...user,
         user_metadata: {
           ...user.user_metadata,
@@ -314,12 +320,67 @@ export function useAuth() {
           tags: profile.tags,
           customStatus: profile.customStatus
         }
-      });
+      } as ExtendedUser;
+
+      setUser(updatedUser);
+      return updatedUser;
     } catch (error) {
       console.error('Error updating profile:', error);
       throw error;
     }
   };
+
+  // Add real-time subscription for profile updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    interface ProfileUpdatePayload {
+      new: {
+        id: string;
+        name: string;
+        avatar: string;
+        tags: string[];
+        custom_status: string;
+      };
+    }
+
+    const channel = supabase
+      .channel('profile-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload: ProfileUpdatePayload) => {
+          console.log('Profile update received:', payload);
+          const newData = payload.new;
+          
+          // Only update the user state if the updated profile belongs to the current user
+          if (newData.id === user.id) {
+            setUser(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                user_metadata: {
+                  ...prev.user_metadata,
+                  name: newData.name,
+                  avatar: newData.avatar,
+                  tags: newData.tags,
+                  customStatus: newData.custom_status
+                }
+              } as ExtendedUser;
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   const handleUser = async (authUser: User | null) => {
     if (!authUser) {

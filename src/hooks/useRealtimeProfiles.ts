@@ -8,23 +8,19 @@ export const useRealtimeProfiles = (setMessages: React.Dispatch<React.SetStateAc
   useEffect(() => {
     // Set up real-time subscription for profile changes
     const channel = supabase
-      .channel('realtime-profiles')
+      .channel('profile-changes')
       .on(
         'postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
+        {
+          event: '*',
+          schema: 'public',
           table: 'profiles'
         },
         async (payload) => {
           console.log('Profile changed in realtime hook:', payload);
           const updatedProfile = payload.new;
-          
-          // Ensure tags are properly processed - some DB operations might return them differently
-          const profileTags = Array.isArray(updatedProfile.tags) ? updatedProfile.tags : [];
-          console.log('Updated profile tags:', profileTags);
-          console.log('Updated custom status:', updatedProfile.custom_status);
-          
+          const profileTags = updatedProfile.tags || [];
+
           // Update any messages that use this profile
           setMessages(prevMessages => {
             console.log('Updating messages for user:', updatedProfile.id, 'with tags:', profileTags);
@@ -36,16 +32,28 @@ export const useRealtimeProfiles = (setMessages: React.Dispatch<React.SetStateAc
                 console.log('Updating message sender:', message.sender_id);
                 const updatedSender = {
                   ...message.sender,
+                  name: updatedProfile.name || message.sender.name,
                   username: updatedProfile.name || message.sender.username,
                   avatar: updatedProfile.avatar || message.sender.avatar,
                   tags: profileTags,
                   customStatus: updatedProfile.custom_status,
+                  isAdmin: profileTags.includes('admin'),
                   user_metadata: {
                     ...message.sender.user_metadata,
                     name: updatedProfile.name,
                     avatar: updatedProfile.avatar,
                     tags: profileTags,
-                    customStatus: updatedProfile.custom_status
+                    customStatus: updatedProfile.custom_status,
+                    isAdmin: profileTags.includes('admin'),
+                    permissions: {
+                      canManagePerks: profileTags.includes('admin'),
+                      canManageSongs: profileTags.includes('admin'),
+                      canManagePinnedMessages: profileTags.includes('admin'),
+                      canManageUsers: profileTags.includes('admin'),
+                      canEditProfile: true,
+                      canWriteMessages: true,
+                      canSuggestSongs: true
+                    }
                   }
                 };
                 console.log('Updated sender:', updatedSender);
@@ -65,23 +73,35 @@ export const useRealtimeProfiles = (setMessages: React.Dispatch<React.SetStateAc
           // Force a reload to ensure UI updates
           setForceUpdate(prev => prev + 1);
           
-          // Dispatch profile update event
-          window.dispatchEvent(new CustomEvent('profile-updated', { 
-            detail: { 
-              user: {
-                id: updatedProfile.id,
-                username: updatedProfile.name,
-                avatar: updatedProfile.avatar,
-                tags: profileTags,
-                customStatus: updatedProfile.custom_status,
-                user_metadata: {
-                  name: updatedProfile.name,
-                  avatar: updatedProfile.avatar,
-                  tags: profileTags,
-                  customStatus: updatedProfile.custom_status
-                }
+          // Dispatch profile update event with complete user data
+          const updatedUser = {
+            id: updatedProfile.id,
+            name: updatedProfile.name,
+            username: updatedProfile.name,
+            avatar: updatedProfile.avatar,
+            tags: profileTags,
+            customStatus: updatedProfile.custom_status,
+            isAdmin: profileTags.includes('admin'),
+            user_metadata: {
+              name: updatedProfile.name,
+              avatar: updatedProfile.avatar,
+              tags: profileTags,
+              customStatus: updatedProfile.custom_status,
+              isAdmin: profileTags.includes('admin'),
+              permissions: {
+                canManagePerks: profileTags.includes('admin'),
+                canManageSongs: profileTags.includes('admin'),
+                canManagePinnedMessages: profileTags.includes('admin'),
+                canManageUsers: profileTags.includes('admin'),
+                canEditProfile: true,
+                canWriteMessages: true,
+                canSuggestSongs: true
               }
-            } 
+            }
+          };
+
+          window.dispatchEvent(new CustomEvent('profile-updated', { 
+            detail: { user: updatedUser }
           }));
         }
       )

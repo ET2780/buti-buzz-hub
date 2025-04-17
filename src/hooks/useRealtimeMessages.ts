@@ -67,10 +67,9 @@ export const useRealtimeMessages = (
 
             if (profile) {
               const isAdmin = profile.tags?.includes('admin') || profile.user_metadata?.permissions?.isAdmin || false;
-              const name = isAdmin 
-                ? (profile.username || profile.user_metadata?.name || 'Admin')
-                : (profile.username || profile.user_metadata?.name || 'אורח');
               
+              // Use the most up-to-date profile data without fallback to temporary names
+              const name = profile.name || profile.user_metadata?.name || '';
               const avatar = isAdmin ? '/buti-logo.png' : (profile.avatar || profile.user_metadata?.avatar || '😊');
 
               const newMessage: Message = {
@@ -162,10 +161,9 @@ export const useRealtimeMessages = (
         const processedMessages = messages.map(message => {
           const profile = profileMap.get(message.sender_id);
           const isAdmin = profile?.tags?.includes('admin') || false;
-          const name = isAdmin 
-            ? (profile?.username || profile?.user_metadata?.name || 'Admin')
-            : (profile?.username || profile?.user_metadata?.name || 'אורח');
           
+          // Use the most up-to-date profile data without fallback to temporary names
+          const name = profile?.name || profile?.user_metadata?.name || '';
           const avatar = isAdmin ? '/buti-logo.png' : (profile?.avatar || profile?.user_metadata?.avatar || '😊');
 
           return {
@@ -223,10 +221,9 @@ export const useRealtimeMessages = (
             setMessages(prev => prev.map(message => {
               if (message.sender.id === payload.new.id) {
                 const isAdmin = payload.new.tags?.includes('admin') || false;
-                const name = isAdmin 
-                  ? (payload.new.username || payload.new.user_metadata?.name || 'Admin')
-                  : (payload.new.username || payload.new.user_metadata?.name || 'אורח');
                 
+                // Use the most up-to-date profile data without fallback to temporary names
+                const name = payload.new.name || payload.new.user_metadata?.name || '';
                 const avatar = isAdmin ? '/buti-logo.png' : (payload.new.avatar || payload.new.user_metadata?.avatar || '😊');
 
                 return {
@@ -253,7 +250,7 @@ export const useRealtimeMessages = (
               return message;
             }));
           } catch (error) {
-            console.error('Error processing profile update:', error);
+            console.error('Error updating messages with profile changes:', error);
           }
         }
       )

@@ -70,7 +70,17 @@ const Chat: React.FC<ChatProps> = ({
   useEffect(() => {
     const handleProfileUpdated = (event: CustomEvent<{user: User}>) => {
       console.log('Profile updated event received in Chat component:', event.detail);
-      setCurrentUser(event.detail.user);
+      const updatedUser = event.detail.user;
+      
+      // Update current user if it's the current user
+      if (updatedUser.id === user?.id) {
+        setCurrentUser(updatedUser);
+      }
+      
+      // Update selected user if it's the selected user
+      if (selectedUser && updatedUser.id === selectedUser.id) {
+        setSelectedUser(updatedUser);
+      }
     };
 
     window.addEventListener('profile-updated', handleProfileUpdated as EventListener);
@@ -78,10 +88,11 @@ const Chat: React.FC<ChatProps> = ({
     return () => {
       window.removeEventListener('profile-updated', handleProfileUpdated as EventListener);
     };
-  }, []);
+  }, [user?.id, selectedUser]);
 
   // Update message sender data with current user data
   const updatedMessages = messages.map(message => {
+    // If this is the current user's message, use current user data
     if (message.isCurrentUser && currentUser) {
       return {
         ...message,
@@ -95,7 +106,20 @@ const Chat: React.FC<ChatProps> = ({
         }
       };
     }
-    return message;
+    
+    // For other users' messages, use the message sender data directly
+    // as it's already updated by the real-time subscription
+    return {
+      ...message,
+      sender: {
+        ...message.sender,
+        name: message.sender.name || '',
+        avatar: message.sender.avatar || '',
+        tags: message.sender.tags || [],
+        customStatus: message.sender.customStatus || '',
+        isAdmin: message.sender.isAdmin || false
+      }
+    };
   });
 
   return (

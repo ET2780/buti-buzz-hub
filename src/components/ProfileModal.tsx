@@ -61,6 +61,28 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user: prop
     }
   }, [user]);
 
+  // Listen for real-time profile updates
+  useEffect(() => {
+    const handleProfileUpdated = (event: CustomEvent<{user: User}>) => {
+      const updatedUser = event.detail?.user;
+      if (!updatedUser) return;
+
+      // Only update if this is the user we're displaying
+      if (updatedUser.id === user?.id) {
+        setUsername(updatedUser.user_metadata?.name || '');
+        setAvatar(updatedUser.user_metadata?.avatar || '😊');
+        setSelectedTags(updatedUser.user_metadata?.tags || []);
+        setCustomStatus(updatedUser.user_metadata?.customStatus || '');
+      }
+    };
+
+    window.addEventListener('profile-updated', handleProfileUpdated as EventListener);
+    
+    return () => {
+      window.removeEventListener('profile-updated', handleProfileUpdated as EventListener);
+    };
+  }, [user?.id]);
+
   const handleSave = async () => {
     if (!authUser) return;
 
