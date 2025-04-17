@@ -1,0 +1,4 @@
+[functions.cleanup]
+verify_jwt = false
+schedule = "0 22 * * *"  # Runs at 22:00 UTC (midnight Israel time during standard time)
+# During daylight savings time, you'll need to change this to "0 21 * * *" 
