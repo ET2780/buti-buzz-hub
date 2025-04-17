@@ -19,8 +19,10 @@ const SongRequestManager: React.FC<SongRequestManagerProps> = ({ isOpen, onClose
 
   const loadRequests = async () => {
     try {
+      console.log('Loading song requests...');
       setIsLoading(true);
       const data = await SongRequestService.getRecentRequests();
+      console.log('Loaded song requests:', data);
       setRequests(data);
     } catch (error) {
       console.error('Error loading song requests:', error);
@@ -32,22 +34,27 @@ const SongRequestManager: React.FC<SongRequestManagerProps> = ({ isOpen, onClose
 
   useEffect(() => {
     if (isOpen) {
+      console.log('Song request manager opened, loading requests...');
       loadRequests();
     }
   }, [isOpen]);
 
   useEffect(() => {
+    console.log('Setting up song request subscription...');
     const unsubscribe = SongRequestService.subscribeToSongRequests((payload) => {
+      console.log('Received song request update:', payload);
       loadRequests();
     });
 
     return () => {
+      console.log('Cleaning up song request subscription...');
       unsubscribe();
     };
   }, []);
 
   const handleApprove = async (request: SongRequest) => {
     try {
+      console.log('Approving song request:', request);
       await SongRequestService.approveSongRequest(request.id, request.created_by_name || 'משתמש');
       
       // Send a message to the chat
@@ -66,6 +73,7 @@ const SongRequestManager: React.FC<SongRequestManagerProps> = ({ isOpen, onClose
 
   const handleReject = async (request: SongRequest) => {
     try {
+      console.log('Rejecting song request:', request);
       await SongRequestService.rejectSongRequest(request.id);
       // Remove the rejected request from the list
       setRequests(requests.filter(r => r.id !== request.id));
@@ -78,6 +86,7 @@ const SongRequestManager: React.FC<SongRequestManagerProps> = ({ isOpen, onClose
 
   const handleDelete = async (request: SongRequest) => {
     try {
+      console.log('Deleting song request:', request);
       await SongRequestService.deleteSongRequest(request.id);
       // Remove the deleted request from the list
       setRequests(requests.filter(r => r.id !== request.id));
@@ -92,6 +101,7 @@ const SongRequestManager: React.FC<SongRequestManagerProps> = ({ isOpen, onClose
   useEffect(() => {
     const clearOldRequests = async () => {
       try {
+        console.log('Clearing old song requests...');
         await SongRequestService.clearOldRequests();
         loadRequests();
       } catch (error) {
@@ -151,36 +161,25 @@ const SongRequestManager: React.FC<SongRequestManagerProps> = ({ isOpen, onClose
                       </p>
                     </CardContent>
                   )}
-                  <CardFooter className="flex flex-col gap-4 items-center">
-                    <div className="text-sm text-muted-foreground">
-                      הוצע ע"י <span dir="auto">{request.created_by_name || 'משתמש'}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      {request.status === 'pending' && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleReject(request)}
-                          >
-                            דחה
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleApprove(request)}
-                          >
-                            אשר
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(request)}
-                      >
-                        מחק
-                      </Button>
-                    </div>
+                  <CardFooter className="flex justify-center gap-2">
+                    <Button
+                      variant="default"
+                      onClick={() => handleApprove(request)}
+                    >
+                      אישור
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleReject(request)}
+                    >
+                      דחייה
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleDelete(request)}
+                    >
+                      מחיקה
+                    </Button>
                   </CardFooter>
                 </Card>
               ))}

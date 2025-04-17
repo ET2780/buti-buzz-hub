@@ -30,6 +30,33 @@ export type Database = {
         }
         Relationships: []
       }
+      song_requests: {
+        Row: {
+          id: string
+          user_id: string
+          song_name: string
+          status: 'pending' | 'approved' | 'rejected'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          song_name: string
+          status?: 'pending' | 'approved' | 'rejected'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          song_name?: string
+          status?: 'pending' | 'approved' | 'rejected'
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       perks: {
         Row: {
           created_at: string

@@ -5,105 +5,50 @@ import { supabase } from '@/integrations/supabase/client';
 import { Music } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'react-hot-toast';
+import { User } from '@supabase/supabase-js';
 
 interface SongRequestFormProps {
-  onSuccess?: () => void;
+  onRequestSubmitted?: () => void;
 }
 
-const SongRequestForm: React.FC<SongRequestFormProps> = ({ onSuccess }) => {
+export const SongRequestForm = ({ onRequestSubmitted }: SongRequestFormProps) => {
+  const { user } = useAuth();
   const [songName, setSongName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user } = useAuth();
-  const { toast } = useToast();
-
-  const ensureUserProfileExists = async (userId: string) => {
-    try {
-      // Check if profile exists
-      const { data: existingProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('id, name, avatar, tags')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error('Error fetching profile:', fetchError);
-        throw fetchError;
-      }
-
-      // If profile doesn't exist, create one
-      if (!existingProfile && user) {
-        console.log('Creating profile for user:', user.id);
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            name: user.name,
-            avatar: user.avatar,
-            tags: user.tags || []
-          });
-
-        if (insertError) {
-          console.error('Error creating user profile:', insertError);
-          throw insertError;
-        }
-
-        // Verify profile was created
-        const { data: verifyProfile, error: verifyError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', userId)
-          .single();
-
-        if (verifyError || !verifyProfile) {
-          throw new Error('Failed to verify profile creation');
-        }
-      }
-    } catch (error) {
-      console.error('Error ensuring user profile exists:', error);
-      throw error;
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!songName.trim() || !user) return;
+    if (!user) {
+      toast.error('You must be logged in to request a song');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      console.log('Submitting song request for user:', user.id);
+      console.log('Submitting song request:', songName);
       
-      // Ensure user profile exists before submitting request
-      await ensureUserProfileExists(user.id);
-      
-      const { error } = await supabase
-        .from('demo_song_requests')
-        .insert([
-          {
-            user_id: user.id,
-            song_name: songName.trim(),
-            status: 'pending'
-          }
-        ]);
+      // Insert song request using regular client
+      const { error: insertError } = await supabase
+        .from('song_requests')
+        .insert({
+          user_id: user.id,
+          song_name: songName,
+          status: 'pending'
+        });
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
+      if (insertError) {
+        console.error('Error inserting song request:', insertError);
+        throw insertError;
       }
 
-      toast({
-        title: 'בקשה נשלחה!',
-        description: 'הבקשה לשיר נשלחה בהצלחה וממתינה לאישור.',
-      });
-
+      console.log('Song request submitted successfully');
+      toast.success('Song request submitted!');
       setSongName('');
-      onSuccess?.();
-    } catch (error: any) {
+      onRequestSubmitted?.();
+    } catch (error) {
       console.error('Error submitting song request:', error);
-      toast({
-        title: 'שגיאה',
-        description: error.message || 'אירעה שגיאה בשליחת הבקשה. אנא נסה שוב.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to submit song request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -111,30 +56,35 @@ const SongRequestForm: React.FC<SongRequestFormProps> = ({ onSuccess }) => {
 
   if (!user) {
     return (
-      <div className="text-center text-muted-foreground">
-        אנא התחבר כדי לבקש שיר
+      <div className="p-4 bg-gray-100 rounded-lg">
+        <p className="text-gray-600">Please log in to request songs</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <Input
-        type="text"
-        value={songName}
-        onChange={(e) => setSongName(e.target.value)}
-        placeholder="שם השיר..."
-        className="flex-1"
-        disabled={isSubmitting}
-      />
-      <Button
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label htmlFor="songName" className="block text-sm font-medium text-gray-700">
+          Song Name
+        </label>
+        <input
+          type="text"
+          id="songName"
+          value={songName}
+          onChange={(e) => setSongName(e.target.value)}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          placeholder="Enter song name"
+          required
+        />
+      </div>
+      <button
         type="submit"
-        disabled={isSubmitting || !songName.trim()}
-        className="flex items-center gap-2"
+        disabled={isSubmitting}
+        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
       >
-        <Music className="h-4 w-4" />
-        בקש שיר
-      </Button>
+        {isSubmitting ? 'Submitting...' : 'Request Song'}
+      </button>
     </form>
   );
 };

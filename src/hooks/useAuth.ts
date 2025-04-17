@@ -1,20 +1,77 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@/types';
+import { User } from '@supabase/supabase-js';
 import { toast } from 'sonner';
+
+interface UserMetadata {
+  isTemporary?: boolean;
+  isAdmin?: boolean;
+  name?: string;
+  avatar?: string;
+  tags?: string[];
+  customStatus?: string;
+  permissions?: {
+    canManagePerks: boolean;
+    canManageSongs: boolean;
+    canManagePinnedMessages: boolean;
+    canManageUsers: boolean;
+    canEditProfile: boolean;
+    canWriteMessages: boolean;
+    canSuggestSongs: boolean;
+  };
+}
+
+interface ExtendedUser extends User {
+  user_metadata: UserMetadata;
+}
 
 // Create a service role client for admin operations
 const serviceRoleClient = supabase;
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<ExtendedUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for admin status in localStorage
-    const isAdmin = localStorage.getItem('buti_admin') === 'true';
-    
-    const initializeAdmin = async () => {
+    const initializeAuth = async () => {
+      // First check if there's a temporary user
+      const tempUserId = localStorage.getItem('temp_user_id');
+      if (tempUserId) {
+        // Get the temporary user's profile
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', tempUserId)
+          .single();
+
+        if (profile && !error) {
+          setUser({
+            id: tempUserId,
+            user_metadata: {
+              isTemporary: true,
+              isAdmin: false,
+              name: profile.name,
+              avatar: profile.avatar,
+              tags: profile.tags,
+              customStatus: profile.custom_status,
+              permissions: {
+                canManagePerks: false,
+                canManageSongs: false,
+                canManagePinnedMessages: false,
+                canManageUsers: false,
+                canEditProfile: true,
+                canWriteMessages: true,
+                canSuggestSongs: true
+              }
+            }
+          } as ExtendedUser);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Then check for admin status
+      const isAdmin = localStorage.getItem('buti_admin') === 'true';
       if (isAdmin) {
         // Generate a UUID for admin user
         const adminId = crypto.randomUUID();
@@ -45,17 +102,18 @@ export function useAuth() {
               canManagePerks: true,
               canManageSongs: true,
               canManagePinnedMessages: true,
+              canManageUsers: true,
               canEditProfile: true,
               canWriteMessages: true,
               canSuggestSongs: true
             }
           }
-        });
+        } as ExtendedUser);
         setLoading(false);
         return;
       }
 
-      // Get initial session
+      // Finally, check for regular auth session
       supabase.auth.getSession().then(({ data: { session } }) => {
         handleUser(session?.user || null);
         setLoading(false);
@@ -71,7 +129,7 @@ export function useAuth() {
       };
     };
 
-    initializeAdmin();
+    initializeAuth();
   }, []);
 
   const generateAmusingName = () => {
@@ -121,7 +179,7 @@ export function useAuth() {
               canSuggestSongs: true
             }
           }
-        };
+        } as ExtendedUser;
 
         setUser(tempUser);
         localStorage.setItem('temp_user_id', tempUserId);
@@ -148,7 +206,7 @@ export function useAuth() {
             canSuggestSongs: true
           }
         }
-      };
+      } as ExtendedUser;
 
       setUser(tempUser);
       localStorage.setItem('temp_user_id', tempUserId);
@@ -178,7 +236,7 @@ export function useAuth() {
             canSuggestSongs: true
           }
         }
-      };
+      } as ExtendedUser;
 
       setUser(tempUser);
       localStorage.setItem('temp_user_id', tempUserId);
@@ -213,46 +271,31 @@ export function useAuth() {
 
         if (profileError) throw profileError;
 
-        // Update local user state with complete metadata
-        const updatedUser = {
+        // Update the user state
+        setUser({
           ...user,
-          username: profile.name,
-          avatar: profile.avatar,
-          tags: profile.tags,
-          customStatus: profile.customStatus,
           user_metadata: {
             ...user.user_metadata,
             name: profile.name,
             avatar: profile.avatar,
             tags: profile.tags,
-            customStatus: profile.customStatus,
-            permissions: user.user_metadata?.permissions || {}
+            customStatus: profile.customStatus
           }
-        };
-
-        setUser(updatedUser);
-
-        // Dispatch a custom event with the updated user data
-        const event = new CustomEvent('profile-updated', {
-          detail: { user: updatedUser }
         });
-        window.dispatchEvent(event);
-
-        return updatedUser;
+        return;
       }
 
-      // For regular users, update both auth metadata and profiles table
-      const { error: metadataError } = await supabase.auth.updateUser({
+      // For regular users, update both auth and profiles
+      const { error: authError } = await supabase.auth.updateUser({
         data: {
           name: profile.name,
           avatar: profile.avatar,
           tags: profile.tags,
-          customStatus: profile.customStatus,
-          permissions: user.user_metadata?.permissions || {}
+          customStatus: profile.customStatus
         }
       });
 
-      if (metadataError) throw metadataError;
+      if (authError) throw authError;
 
       const { error: profileError } = await supabase
         .from('profiles')
@@ -261,256 +304,97 @@ export function useAuth() {
 
       if (profileError) throw profileError;
 
-      // Refresh the user to get updated metadata
-      const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) throw refreshError;
-      
-      if (refreshedUser) {
-        // Create a complete user object with all necessary data
-        const updatedUser = {
-          ...refreshedUser,
-          username: profile.name,
+      // Update the user state
+      setUser({
+        ...user,
+        user_metadata: {
+          ...user.user_metadata,
+          name: profile.name,
           avatar: profile.avatar,
           tags: profile.tags,
-          customStatus: profile.customStatus,
-          user_metadata: {
-            ...refreshedUser.user_metadata,
-            name: profile.name,
-            avatar: profile.avatar,
-            tags: profile.tags,
-            customStatus: profile.customStatus
-          }
-        };
-
-        setUser(updatedUser);
-        
-        // Dispatch a custom event with the complete updated user data
-        const event = new CustomEvent('profile-updated', {
-          detail: { user: updatedUser }
-        });
-        window.dispatchEvent(event);
-        
-        return updatedUser;
-      }
-
-      return null;
+          customStatus: profile.customStatus
+        }
+      });
     } catch (error) {
       console.error('Error updating profile:', error);
       throw error;
     }
   };
 
-  const handleUser = async (authUser: any) => {
+  const handleUser = async (authUser: User | null) => {
     if (!authUser) {
-      // Check for temporary user
-      const tempUserId = localStorage.getItem('temp_user_id');
-      if (tempUserId) {
-        try {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', tempUserId)
-            .single();
-
-          if (profileError) {
-            console.error('Error fetching temporary profile:', profileError);
-            localStorage.removeItem('temp_user_id');
-            setUser(null);
-            return;
-          }
-
-          if (profile) {
-            setUser({
-              id: tempUserId,
-              user_metadata: {
-                isTemporary: true,
-                isAdmin: false,
-                name: profile.name,
-                avatar: profile.avatar,
-                tags: profile.tags,
-                customStatus: profile.custom_status,
-                permissions: {
-                  canManagePerks: false,
-                  canManageSongs: false,
-                  canManagePinnedMessages: false,
-                  canManageUsers: false,
-                  canEditProfile: true,
-                  canWriteMessages: true,
-                  canSuggestSongs: true
-                }
-              }
-            });
-            return;
-          }
-        } catch (error) {
-          console.error('Error handling temporary user:', error);
-          localStorage.removeItem('temp_user_id');
-        }
-      }
       setUser(null);
       return;
     }
 
     try {
-      // Get or create user profile
-      const { data: profile, error: profileError } = await supabase
+      // Get the user's profile
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
         .single();
 
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error fetching user profile:', profileError);
-        throw profileError;
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
       }
 
-      if (!profile) {
-        // Create profile for new user
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authUser.id,
-            name: authUser.user_metadata?.name || 'New User',
-            avatar: authUser.user_metadata?.avatar || '😊',
-            tags: ['user'],
-            custom_status: ''
-          });
-
-        if (insertError) {
-          console.error('Error creating user profile:', insertError);
-          throw insertError;
-        }
-      }
-
-      // Set user with combined data
-      const userData = {
+      // Create the extended user object
+      const extendedUser = {
         ...authUser,
-        isAdmin: false,
         user_metadata: {
           ...authUser.user_metadata,
-          isAdmin: false,
-          isTemporary: false,
-          name: authUser.user_metadata?.name || profile?.name || 'New User',
-          avatar: authUser.user_metadata?.avatar || profile?.avatar || '😊',
-          tags: profile?.tags || [],
-          customStatus: profile?.custom_status || '',
+          name: profile?.name || authUser.user_metadata?.name,
+          avatar: profile?.avatar || authUser.user_metadata?.avatar,
+          tags: profile?.tags || authUser.user_metadata?.tags,
+          customStatus: profile?.custom_status || authUser.user_metadata?.customStatus,
           permissions: {
-            canManagePerks: false,
-            canManageSongs: false,
-            canManagePinnedMessages: false,
-            canManageUsers: false,
+            canManagePerks: profile?.tags?.includes('admin') || false,
+            canManageSongs: profile?.tags?.includes('admin') || false,
+            canManagePinnedMessages: profile?.tags?.includes('admin') || false,
+            canManageUsers: profile?.tags?.includes('admin') || false,
             canEditProfile: true,
             canWriteMessages: true,
             canSuggestSongs: true
           }
         }
-      };
+      } as ExtendedUser;
 
-      console.log('Setting user data:', userData);
-      setUser(userData);
-
-      // Dispatch profile-updated event
-      const event = new CustomEvent('profile-updated', {
-        detail: { user: userData }
-      });
-      window.dispatchEvent(event);
+      setUser(extendedUser);
     } catch (error) {
       console.error('Error handling user:', error);
-      setUser(null);
     }
   };
 
   const signOut = async () => {
-    if (!user) return;
-
     try {
-      // If temporary user, clean up their data
-      if (user.user_metadata?.isTemporary) {
-        // Delete user profile
-        await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', user.id);
-
-        // Delete user role
-        await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', user.id);
-
-        // Delete any messages from this user
-        await supabase
-          .from('messages')
-          .delete()
-          .eq('sender_id', user.id);
-
-        // Clear temporary user data from localStorage
-        localStorage.removeItem('temp_user_id');
-        localStorage.removeItem('temp_user_name');
-        localStorage.removeItem('temp_user_avatar');
-      }
-
-      // Regular Supabase signout
       await supabase.auth.signOut();
       setUser(null);
+      localStorage.removeItem('temp_user_id');
+      localStorage.removeItem('buti_admin');
     } catch (error) {
-      console.error('Error during sign out:', error);
+      console.error('Error signing out:', error);
       throw error;
     }
   };
 
   const resetAdminCredentials = async () => {
     try {
-      // Sign in with service role to reset admin credentials
-      const { error: signInError } = await serviceRoleClient.auth.signInWithPassword({
-        email: 'admin@buti.com',
-        password: 'admin09*&'
-      });
-
-      if (signInError) {
-        // If sign in fails, try to sign up
-        const { error: signUpError } = await serviceRoleClient.auth.signUp({
-          email: 'admin@buti.com',
-          password: 'admin09*&',
-          options: {
-            data: {
-              name: 'Buti Staff',
-              avatar: '👨‍💼',
-              isAdmin: true,
-              permissions: {
-                canManagePerks: true,
-                canManageSongs: true,
-                canManagePinnedMessages: true,
-                canEditProfile: true,
-                canWriteMessages: true,
-                canSuggestSongs: true
-              }
-            }
-          }
-        });
-
-        if (signUpError) throw signUpError;
-      }
-
-      // Set admin flag in localStorage
-      localStorage.setItem('buti_admin', 'true');
-      
-      toast.success('Admin credentials reset successfully');
-      console.log('Admin credentials reset to:');
-      console.log('Email: admin@buti.com');
-      console.log('Password: admin09*&');
+      localStorage.removeItem('buti_admin');
+      await signOut();
     } catch (error) {
       console.error('Error resetting admin credentials:', error);
-      toast.error('Failed to reset admin credentials');
+      throw error;
     }
   };
 
   return {
     user,
     loading,
-    signOut,
     createTemporaryUser,
     updateProfile,
+    signOut,
     resetAdminCredentials
   };
 } 
