@@ -49,9 +49,13 @@ export interface Message {
     isAdmin: boolean;
     tags: string[];
     customStatus?: string;
-    user_metadata?: {
-      permissions?: {
-        isAdmin?: boolean;
+    user_metadata: {
+      name: string;
+      avatar: string;
+      tags: string[];
+      customStatus?: string;
+      permissions: {
+        isAdmin: boolean;
       };
     };
   };

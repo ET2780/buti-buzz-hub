@@ -1,37 +1,62 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User } from '@/types';
 
-export const ButiAvatar = ({ user }: { user: User | null }) => {
-  // Check admin status from both possible locations
-  const isAdmin = user?.isAdmin || user?.user_metadata?.permissions?.isAdmin === true;
-  
-  // Get name from both possible locations
-  const name = user?.user_metadata?.name || user?.username || 'אורח';
-  
-  // Get avatar from both possible locations
-  const avatar = user?.user_metadata?.avatar || user?.avatar || '😊';
+interface ButiAvatarProps {
+  user: User | null;
+  className?: string;
+}
 
-  if (isAdmin) {
-    return (
-      <Avatar>
-        <AvatarImage src="/buti-logo.png" alt={name} className="object-contain" />
-        <AvatarFallback>
-          <img src="/buti-logo.png" alt={name} className="w-full h-full object-contain" />
-        </AvatarFallback>
-      </Avatar>
-    );
-  }
+const ButiAvatar: React.FC<ButiAvatarProps> = ({ user, className }) => {
+  const isAdmin = user?.isAdmin || user?.user_metadata?.permissions?.isAdmin || false;
+  const name = user?.user_metadata?.name || user?.username || 'אורח';
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    if (isAdmin) {
+      const img = new Image();
+      img.src = '/buti-logo.png';
+      img.onload = () => setImageLoaded(true);
+    }
+  }, [isAdmin]);
 
   return (
-    <Avatar>
-      {avatar.startsWith('http') ? (
-        <AvatarImage src={avatar} alt={name} />
+    <Avatar className={className}>
+      {isAdmin ? (
+        <>
+          <AvatarImage 
+            src="/buti-logo.png" 
+            alt={name} 
+            className="object-contain p-1 bg-white"
+            onLoad={() => setImageLoaded(true)}
+          />
+          <AvatarFallback className="bg-white">
+            {imageLoaded ? (
+              <img 
+                src="/buti-logo.png" 
+                alt={name} 
+                className="w-full h-full object-contain p-1"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                Admin
+              </div>
+            )}
+          </AvatarFallback>
+        </>
       ) : (
-        <AvatarFallback className="text-xl">
-          {avatar}
-        </AvatarFallback>
+        <>
+          <AvatarImage 
+            src={user?.user_metadata?.avatar?.startsWith('http') ? user.user_metadata.avatar : undefined} 
+            alt={name} 
+          />
+          <AvatarFallback className="text-lg">
+            {user?.user_metadata?.avatar?.startsWith('http') ? name[0] : (user?.user_metadata?.avatar || '😊')}
+          </AvatarFallback>
+        </>
       )}
     </Avatar>
   );
 };
+
+export default ButiAvatar;

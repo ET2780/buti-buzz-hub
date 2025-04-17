@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ButiAvatar } from './ButiAvatar';
+import ButiAvatar from './ButiAvatar';
 import { useAuth } from '@/hooks/useAuth';
 import ProfileModal from './ProfileModal';
 

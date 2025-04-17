@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { User } from '@/types';
 import { toast } from 'sonner';
 
-export function useMessageSender() {
+export function useMessageSender(user: User | null) {
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const { user } = useAuth();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value);
@@ -15,24 +14,38 @@ export function useMessageSender() {
   const sendMessage = async () => {
     if (!user?.id || !newMessage.trim()) return;
 
+    console.log('Sending message:', newMessage);
     setIsSending(true);
     try {
       // Get user profile data
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('name, avatar, tags, custom_status')
         .eq('id', user.id)
         .single();
 
-      const { error } = await supabase
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        throw profileError;
+      }
+
+      console.log('Profile found:', profile);
+
+      const { data, error } = await supabase
         .from('messages')
         .insert({
           sender_id: user.id,
           text: newMessage.trim(),
           created_at: new Date().toISOString()
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error sending message:', error);
+        throw error;
+      }
+
+      console.log('Message sent successfully:', data);
       setNewMessage('');
     } catch (error: any) {
       console.error('Error sending message:', error);

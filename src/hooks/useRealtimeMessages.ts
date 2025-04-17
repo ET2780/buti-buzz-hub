@@ -30,9 +30,17 @@ export const useRealtimeMessages = (
   useEffect(() => {
     if (!user) return;
     
+    console.log('Setting up real-time subscription for user:', user.id);
+    
+    // Clean up any existing channel
+    if (supabaseChannel.current) {
+      console.log('Cleaning up existing channel');
+      supabase.removeChannel(supabaseChannel.current);
+    }
+    
     // Create a channel for chat events
     const channel = supabase
-      .channel('messages')
+      .channel(`messages-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -40,11 +48,11 @@ export const useRealtimeMessages = (
           schema: 'public',
           table: 'messages'
         },
-        async (payload) => {
+        async (payload: RealtimePostgresChangesPayload<{ [key: string]: any }>) => {
+          console.log('New message received:', payload);
+          
           try {
-            // First, try to get the profile from the profiles table
-            let profile;
-            const { data: existingProfile, error: profileError } = await supabase
+            const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', payload.new.sender_id)
@@ -55,65 +63,72 @@ export const useRealtimeMessages = (
               return;
             }
 
-            profile = existingProfile;
-            if (!profile) {
-              console.warn(`No profile found for user ${payload.new.sender_id}`);
-              return;
-            }
+            console.log('Profile found:', profile);
 
-            const isAdmin = profile.tags?.includes('admin') || false;
-            const name = profile.name || 'אורח';
-            const avatar = isAdmin ? '/buti-logo.png' : (profile.avatar || '😊');
-            const tags = profile.tags || ['guest'];
-            const customStatus = profile.custom_status || 'אורח';
-            
-            const newMessage: Message = {
-              id: payload.new.id,
-              text: payload.new.text,
-              timestamp: new Date(payload.new.created_at),
-              isCurrentUser: payload.new.sender_id === user.id,
-              isAutomated: payload.new.is_automated || false,
-              sender: {
-                id: profile.id,
-                name,
-                avatar,
-                isAdmin,
-                tags,
-                customStatus,
-                user_metadata: {
-                  isTemporary: profile.is_temporary || false,
-                  isAdmin,
+            if (profile) {
+              const isAdmin = profile.tags?.includes('admin') || profile.user_metadata?.permissions?.isAdmin || false;
+              const name = isAdmin 
+                ? (profile.username || profile.user_metadata?.name || 'Admin')
+                : (profile.username || profile.user_metadata?.name || 'אורח');
+              
+              const avatar = isAdmin ? '/buti-logo.png' : (profile.avatar || profile.user_metadata?.avatar || '😊');
+
+              const newMessage: Message = {
+                id: payload.new.id,
+                text: payload.new.text,
+                timestamp: new Date(payload.new.created_at),
+                isCurrentUser: payload.new.sender_id === user.id,
+                isAutomated: payload.new.is_automated || false,
+                sender: {
+                  id: profile.id,
                   name,
                   avatar,
-                  tags,
-                  customStatus,
-                  permissions: {
-                    canManagePerks: false,
-                    canManageSongs: false,
-                    canManagePinnedMessages: false,
-                    canManageUsers: false,
-                    canEditProfile: true,
-                    canWriteMessages: true,
-                    canSuggestSongs: true
+                  isAdmin,
+                  tags: profile.tags || [],
+                  customStatus: profile.custom_status || profile.user_metadata?.customStatus || '',
+                  user_metadata: {
+                    name,
+                    avatar,
+                    tags: profile.tags || [],
+                    customStatus: profile.custom_status || profile.user_metadata?.customStatus || '',
+                    permissions: {
+                      isAdmin
+                    }
                   }
                 }
-              }
-            };
+              };
 
-            setMessages(prev => [...prev, newMessage]);
+              console.log('Adding new message to state:', newMessage);
+              setMessages(prev => {
+                console.log('Previous messages:', prev);
+                const updated = [...prev, newMessage];
+                console.log('Updated messages:', updated);
+                return updated;
+              });
+            }
           } catch (error) {
             console.error('Error processing new message:', error);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to messages!');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to messages');
+          setConnectionError('Failed to connect to chat. Please try refreshing the page.');
+        }
+      });
       
     supabaseChannel.current = channel;
     
     // Clean up subscription
     return () => {
       if (supabaseChannel.current) {
+        console.log('Cleaning up channel');
         supabase.removeChannel(supabaseChannel.current);
+        supabaseChannel.current = null;
       }
     };
   }, [user, setMessages, setConnectionError]);
@@ -138,10 +153,7 @@ export const useRealtimeMessages = (
           .select('*')
           .in('id', senderIds);
 
-        if (profilesError) {
-          console.error('Error fetching profiles:', profilesError);
-          throw profilesError;
-        }
+        if (profilesError) throw profilesError;
 
         // Create a map of profiles for quick lookup
         const profileMap = new Map(profiles.map(p => [p.id, p]));
@@ -149,17 +161,13 @@ export const useRealtimeMessages = (
         // Process messages with profile data
         const processedMessages = messages.map(message => {
           const profile = profileMap.get(message.sender_id);
-          if (!profile) {
-            console.warn(`No profile found for user ${message.sender_id}`);
-            return null;
-          }
-
-          const isAdmin = profile.tags?.includes('admin') || false;
-          const name = profile.name || 'אורח';
-          const avatar = isAdmin ? '/buti-logo.png' : (profile.avatar || '😊');
-          const tags = profile.tags || ['guest'];
-          const customStatus = profile.custom_status || 'אורח';
+          const isAdmin = profile?.tags?.includes('admin') || false;
+          const name = isAdmin 
+            ? (profile?.username || profile?.user_metadata?.name || 'Admin')
+            : (profile?.username || profile?.user_metadata?.name || 'אורח');
           
+          const avatar = isAdmin ? '/buti-logo.png' : (profile?.avatar || profile?.user_metadata?.avatar || '😊');
+
           return {
             id: message.id,
             text: message.text,
@@ -167,32 +175,24 @@ export const useRealtimeMessages = (
             isCurrentUser: message.sender_id === user.id,
             isAutomated: message.is_automated || false,
             sender: {
-              id: profile.id,
+              id: profile?.id || message.sender_id,
               name,
               avatar,
               isAdmin,
-              tags,
-              customStatus,
+              tags: profile?.tags || [],
+              customStatus: profile?.custom_status || profile?.user_metadata?.customStatus || '',
               user_metadata: {
-                isTemporary: profile.is_temporary || false,
-                isAdmin,
                 name,
                 avatar,
-                tags,
-                customStatus,
+                tags: profile?.tags || [],
+                customStatus: profile?.custom_status || profile?.user_metadata?.customStatus || '',
                 permissions: {
-                  canManagePerks: false,
-                  canManageSongs: false,
-                  canManagePinnedMessages: false,
-                  canManageUsers: false,
-                  canEditProfile: true,
-                  canWriteMessages: true,
-                  canSuggestSongs: true
+                  isAdmin
                 }
               }
             }
           };
-        }).filter(Boolean) as Message[];
+        });
 
         setMessages(processedMessages);
       } catch (error) {
@@ -209,7 +209,7 @@ export const useRealtimeMessages = (
     if (!user) return;
 
     const channel = supabase
-      .channel('profiles')
+      .channel(`profiles-${Math.random()}`)
       .on(
         'postgres_changes',
         {
@@ -223,11 +223,12 @@ export const useRealtimeMessages = (
             setMessages(prev => prev.map(message => {
               if (message.sender.id === payload.new.id) {
                 const isAdmin = payload.new.tags?.includes('admin') || false;
-                const name = payload.new.name || 'אורח';
-                const avatar = isAdmin ? '/buti-logo.png' : (payload.new.avatar || '😊');
-                const tags = payload.new.tags || ['guest'];
-                const customStatus = payload.new.custom_status || 'אורח';
+                const name = isAdmin 
+                  ? (payload.new.username || payload.new.user_metadata?.name || 'Admin')
+                  : (payload.new.username || payload.new.user_metadata?.name || 'אורח');
                 
+                const avatar = isAdmin ? '/buti-logo.png' : (payload.new.avatar || payload.new.user_metadata?.avatar || '😊');
+
                 return {
                   ...message,
                   sender: {
@@ -235,23 +236,15 @@ export const useRealtimeMessages = (
                     name,
                     avatar,
                     isAdmin,
-                    tags,
-                    customStatus,
+                    tags: payload.new.tags || [],
+                    customStatus: payload.new.custom_status || payload.new.user_metadata?.customStatus || '',
                     user_metadata: {
-                      isTemporary: true,
-                      isAdmin,
                       name,
                       avatar,
-                      tags,
-                      customStatus,
+                      tags: payload.new.tags || [],
+                      customStatus: payload.new.custom_status || payload.new.user_metadata?.customStatus || '',
                       permissions: {
-                        canManagePerks: false,
-                        canManageSongs: false,
-                        canManagePinnedMessages: false,
-                        canManageUsers: false,
-                        canEditProfile: true,
-                        canWriteMessages: true,
-                        canSuggestSongs: true
+                        isAdmin
                       }
                     }
                   }

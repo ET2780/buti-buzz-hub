@@ -7,7 +7,7 @@ interface MessageData {
   id: string;
   text: string;
   created_at: string;
-  sender_id: string;
+  user_id: string;
   is_temporary: boolean;
   is_automated?: boolean;
 }
@@ -34,20 +34,31 @@ export const useChatMessages = (user: User | null, refreshKey: number = 0) => {
       setConnectionError(null);
       
       try {
+        console.log('Fetching messages...');
         // Fetch messages
         const { data: messagesData, error: messagesError } = await supabase
           .from('messages')
           .select('id, text, created_at, sender_id')
           .order('created_at', { ascending: true });
         
-        if (messagesError) throw messagesError;
+        if (messagesError) {
+          console.error('Error fetching messages:', messagesError);
+          throw messagesError;
+        }
+        
+        console.log('Messages fetched:', messagesData);
         
         // Fetch profiles
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, name, avatar, tags, custom_status');
           
-        if (profilesError) throw profilesError;
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+          throw profilesError;
+        }
+        
+        console.log('Profiles fetched:', profilesData);
         
         // Create maps for quick lookups
         const profilesMap = profilesData.reduce((acc: Record<string, ProfileData>, profile: ProfileData) => {
@@ -58,6 +69,7 @@ export const useChatMessages = (user: User | null, refreshKey: number = 0) => {
         // Format messages
         const formattedMessages = messagesData.map((message: MessageData): Message => {
           const profile = profilesMap[message.sender_id];
+          const isAdmin = profile?.tags?.includes('admin') || false;
           
           return {
             id: message.id,
@@ -67,15 +79,25 @@ export const useChatMessages = (user: User | null, refreshKey: number = 0) => {
             isAutomated: false,
             sender: {
               id: message.sender_id,
-              name: profile?.name || 'Unknown User',
-              avatar: profile?.avatar || '😊',
-              isAdmin: false, // We'll handle admin status separately if needed
+              name: isAdmin ? (profile?.name || 'Admin') : (profile?.name || 'אורח'),
+              avatar: isAdmin ? '/buti-logo.png' : (profile?.avatar || '😊'),
+              isAdmin,
               tags: profile?.tags || [],
-              customStatus: profile?.custom_status || ''
+              customStatus: profile?.custom_status || '',
+              user_metadata: {
+                name: isAdmin ? (profile?.name || 'Admin') : (profile?.name || 'אורח'),
+                avatar: isAdmin ? '/buti-logo.png' : (profile?.avatar || '😊'),
+                tags: profile?.tags || [],
+                customStatus: profile?.custom_status || '',
+                permissions: {
+                  isAdmin
+                }
+              }
             }
           };
         });
         
+        console.log('Formatted messages:', formattedMessages);
         setMessages(formattedMessages);
         fetchAttempts.current = 0;
       } catch (error: any) {
@@ -83,6 +105,7 @@ export const useChatMessages = (user: User | null, refreshKey: number = 0) => {
         
         fetchAttempts.current += 1;
         if (fetchAttempts.current < 3) {
+          console.log(`Retrying fetch (attempt ${fetchAttempts.current})...`);
           setTimeout(fetchMessages, 2000);
           return;
         } else {
@@ -108,14 +131,26 @@ export const useChatMessages = (user: User | null, refreshKey: number = 0) => {
       setMessages(prevMessages => 
         prevMessages.map(message => {
           if (message.sender.id === updatedUser.id) {
+            const isAdmin = updatedUser.user_metadata?.permissions?.isAdmin || message.sender.isAdmin;
             return {
               ...message,
               sender: {
                 ...message.sender,
-                name: updatedUser.user_metadata?.name || message.sender.name,
-                avatar: updatedUser.user_metadata?.avatar || message.sender.avatar,
+                name: isAdmin ? (updatedUser.user_metadata?.name || 'Admin') : (updatedUser.user_metadata?.name || message.sender.name),
+                avatar: isAdmin ? '/buti-logo.png' : (updatedUser.user_metadata?.avatar || message.sender.avatar),
                 tags: updatedUser.user_metadata?.tags || message.sender.tags,
-                customStatus: updatedUser.user_metadata?.customStatus || message.sender.customStatus
+                customStatus: updatedUser.user_metadata?.customStatus || message.sender.customStatus,
+                isAdmin,
+                user_metadata: {
+                  ...message.sender.user_metadata,
+                  name: isAdmin ? (updatedUser.user_metadata?.name || 'Admin') : (updatedUser.user_metadata?.name || message.sender.name),
+                  avatar: isAdmin ? '/buti-logo.png' : (updatedUser.user_metadata?.avatar || message.sender.avatar),
+                  tags: updatedUser.user_metadata?.tags || message.sender.tags,
+                  customStatus: updatedUser.user_metadata?.customStatus || message.sender.customStatus,
+                  permissions: {
+                    isAdmin
+                  }
+                }
               }
             };
           }
