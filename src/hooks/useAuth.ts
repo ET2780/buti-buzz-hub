@@ -15,102 +15,51 @@ export function useAuth() {
     const isAdmin = localStorage.getItem('buti_admin') === 'true';
     
     const initializeAdmin = async () => {
-      // Only proceed with admin initialization if explicitly set as admin
       if (isAdmin) {
-        try {
-          // Generate a UUID for admin user
-          const adminId = crypto.randomUUID();
-          
-          // Create admin profile in the database
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: adminId,
-              name: 'Buti Staff',
-              avatar: '/buti-logo.png',
-              tags: ['admin'],
-              custom_status: 'צוות BUTI'
-            });
-
-          if (profileError) {
-            console.error('Error creating admin profile:', profileError);
-            // If profile creation fails, we'll still create an admin user in memory
-            const adminUser = {
-              id: adminId,
-              user_metadata: {
-                isTemporary: false,
-                isAdmin: true,
-                name: 'Buti Staff',
-                avatar: '/buti-logo.png',
-                permissions: {
-                  canManagePerks: true,
-                  canManageSongs: true,
-                  canManagePinnedMessages: true,
-                  canEditProfile: true,
-                  canWriteMessages: true,
-                  canSuggestSongs: true
-                }
-              }
-            };
-            setUser(adminUser);
-            setLoading(false);
-            return;
-          }
-
-          setUser({
+        // Generate a UUID for admin user
+        const adminId = crypto.randomUUID();
+        
+        // Create admin profile in the database
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
             id: adminId,
-            user_metadata: {
-              isTemporary: false,
-              isAdmin: true,
-              name: 'Buti Staff',
-              avatar: '/buti-logo.png',
-              permissions: {
-                canManagePerks: true,
-                canManageSongs: true,
-                canManagePinnedMessages: true,
-                canEditProfile: true,
-                canWriteMessages: true,
-                canSuggestSongs: true
-              }
-            }
+            name: 'Buti Staff',
+            avatar: '/buti-logo.png',
+            tags: ['admin'],
+            custom_status: 'צוות BUTI'
           });
-        } catch (error) {
-          console.error('Error initializing admin:', error);
-          // If there's an error, we'll still create an admin user in memory
-          const adminId = crypto.randomUUID();
-          const adminUser = {
-            id: adminId,
-            user_metadata: {
-              isTemporary: false,
-              isAdmin: true,
-              name: 'Buti Staff',
-              avatar: '/buti-logo.png',
-              permissions: {
-                canManagePerks: true,
-                canManageSongs: true,
-                canManagePinnedMessages: true,
-                canEditProfile: true,
-                canWriteMessages: true,
-                canSuggestSongs: true
-              }
-            }
-          };
-          setUser(adminUser);
+
+        if (profileError) {
+          console.error('Error creating admin profile:', profileError);
         }
+
+        setUser({
+          id: adminId,
+          user_metadata: {
+            isTemporary: false,
+            isAdmin: true,
+            name: 'Buti Staff',
+            avatar: '/buti-logo.png',
+            permissions: {
+              canManagePerks: true,
+              canManageSongs: true,
+              canManagePinnedMessages: true,
+              canEditProfile: true,
+              canWriteMessages: true,
+              canSuggestSongs: true
+            }
+          }
+        });
         setLoading(false);
         return;
       }
 
-      // For non-admin users, check for existing session or create temporary user
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        handleUser(session.user);
-      } else {
-        // Create temporary user for guests
-        await createTemporaryUser();
-      }
-      setLoading(false);
+      // Get initial session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        handleUser(session?.user || null);
+        setLoading(false);
+      });
 
       // Listen for auth changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -139,26 +88,47 @@ export function useAuth() {
       const tempUserId = crypto.randomUUID();
       const amusingName = generateAmusingName();
       
-      try {
-        // Create a temporary user profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: tempUserId,
+      // Create a temporary user profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: tempUserId,
+          name: amusingName,
+          avatar: '😊',
+          tags: ['guest'],
+          custom_status: 'אורח'
+        });
+
+      if (profileError) {
+        console.error('Error creating temporary profile:', profileError);
+        // If profile creation fails, we'll still create a temporary user in memory
+        const tempUser = {
+          id: tempUserId,
+          user_metadata: {
+            isTemporary: true,
+            isAdmin: false,
             name: amusingName,
             avatar: '😊',
             tags: ['guest'],
-            custom_status: 'אורח'
-          });
+            customStatus: 'אורח',
+            permissions: {
+              canManagePerks: false,
+              canManageSongs: false,
+              canManagePinnedMessages: false,
+              canManageUsers: false,
+              canEditProfile: true,
+              canWriteMessages: true,
+              canSuggestSongs: true
+            }
+          }
+        };
 
-        if (profileError) {
-          console.error('Error creating temporary profile:', profileError);
-        }
-      } catch (error) {
-        console.error('Error creating temporary profile:', error);
+        setUser(tempUser);
+        localStorage.setItem('temp_user_id', tempUserId);
+        return tempUserId;
       }
 
-      // Set the user in state regardless of database success
+      // Set the user in state
       const tempUser = {
         id: tempUserId,
         user_metadata: {
@@ -350,8 +320,6 @@ export function useAuth() {
           }
 
           if (profile) {
-            // Clear admin flag for temporary users
-            localStorage.removeItem('buti_admin');
             setUser({
               id: tempUserId,
               user_metadata: {
@@ -481,9 +449,6 @@ export function useAuth() {
         localStorage.removeItem('temp_user_name');
         localStorage.removeItem('temp_user_avatar');
       }
-
-      // Clear admin flag on sign out
-      localStorage.removeItem('buti_admin');
 
       // Regular Supabase signout
       await supabase.auth.signOut();

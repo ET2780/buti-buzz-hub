@@ -20,7 +20,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
-import { ButiAvatar } from './ButiAvatar';
 
 // Available interest tags in Hebrew
 const INTEREST_TAGS = [
@@ -49,7 +48,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user: prop
   const [customStatus, setCustomStatus] = useState(user?.user_metadata?.customStatus || '');
   const [customTag, setCustomTag] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const isAdmin = user?.user_metadata?.permissions?.isAdmin === true;
+  const isAdmin = user?.user_metadata?.isAdmin === true;
   const isViewOnly = !!propUser; // If propUser is provided, it's view-only mode
 
   // Update local state when user data changes
@@ -120,67 +119,50 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user: prop
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={cn(
-        "sm:max-w-[425px] rtl",
-        isViewOnly && "bg-background"
-      )}>
-        <div className="absolute left-4 top-4">
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        <DialogHeader className="text-right">
-          <DialogTitle className={cn(
-            "flex items-center gap-2 justify-end",
-            isViewOnly && "text-foreground"
-          )}>
-            {isViewOnly ? (
-              <>
-                <span>פרופיל משתמש</span>
-                <UserIcon className="h-5 w-5" />
-              </>
-            ) : (
-              <>
-                <span>עריכת פרופיל</span>
-                <UserIcon className="h-5 w-5" />
-              </>
-            )}
-          </DialogTitle>
-          {!isViewOnly && (
-            <DialogDescription className="text-right">
-              ערכו את פרטי הפרופיל שלכם כאן. לחצו על שמור כאשר סיימתם.
-            </DialogDescription>
-          )}
+      <DialogContent className="sm:max-w-[425px] bg-white dark:bg-gray-800" aria-describedby="profile-description">
+        <DialogHeader>
+          <DialogTitle>פרופיל משתמש</DialogTitle>
+          <DialogDescription id="profile-description">
+            {isViewOnly ? 'צפייה בפרופיל המשתמש' : 'עריכת פרטי הפרופיל'}
+          </DialogDescription>
         </DialogHeader>
-
-        <div className={cn(
-          "space-y-4 py-4",
-          isViewOnly && "pointer-events-none"
-        )}>
-          {/* Avatar Section */}
-          <div className="flex flex-col items-center gap-4">
-            <div className={cn(
-              "p-4 rounded-full bg-muted flex items-center justify-center",
-              isViewOnly && "bg-muted"
-            )}>
-              {isAdmin ? (
-                <>
-                  <ButiAvatar user={user} />
-                  {!isViewOnly && (
-                    <p className="text-sm text-muted-foreground text-center mt-2">
-                      לוגו BUTI הוא האבטאר היחיד הזמין למנהלים
-                    </p>
-                  )}
-                </>
-              ) : (
-                !isViewOnly ? (
-                  <div className="grid grid-cols-6 gap-2">
+        <div className="grid gap-4 py-4">
+          <div className="flex flex-col items-center space-y-4">
+            {isAdmin ? (
+              <div className="flex flex-col items-center space-y-2">
+                <div className="relative w-24 h-24 rounded-full overflow-hidden bg-white border-2 border-primary flex items-center justify-center">
+                  <img
+                    src={user?.user_metadata?.avatar || '/buti-logo.png'}
+                    alt="Admin Avatar"
+                    className="w-20 h-20 object-contain"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = document.createElement('div');
+                      fallback.className = 'w-full h-full flex items-center justify-center text-lg';
+                      fallback.textContent = 'Admin';
+                      target.parentNode?.appendChild(fallback);
+                    }}
+                  />
+                </div>
+                {!isViewOnly && (
+                  <p className="text-sm text-gray-500 text-center">
+                    The buti logo is the only available avatar for admins
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center space-y-2">
+                {!isViewOnly ? (
+                  <div className="grid grid-cols-4 gap-2">
                     {EMOJIS.map((emoji) => (
                       <button
                         key={emoji}
                         onClick={() => setAvatar(emoji)}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${
-                          avatar === emoji ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                        className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all ${
+                          avatar === emoji
+                            ? 'bg-primary text-white'
+                            : 'bg-gray-100 hover:bg-gray-200'
                         }`}
                       >
                         {emoji}
@@ -188,15 +170,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user: prop
                     ))}
                   </div>
                 ) : (
-                  <div className="text-4xl">
-                    {avatar}
+                  <div className="w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-white border-2 border-primary">
+                    {user?.user_metadata?.avatar || avatar}
                   </div>
-                )
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Name Section */}
           <div className="space-y-2">
             <Label className={cn(
               "text-sm font-medium text-right block",
@@ -219,7 +200,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user: prop
             )}
           </div>
 
-          {/* Custom Status Section */}
           <div className="space-y-2">
             <Label className={cn(
               "text-sm font-medium text-right block",
@@ -242,7 +222,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user: prop
             )}
           </div>
 
-          {/* Tags Section */}
           <div className="space-y-2">
             <Label className={cn(
               "text-sm font-medium text-right block",
