@@ -21,6 +21,10 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
     setIsLoading(true);
 
     try {
+      // Log environment variables (without sensitive data)
+      console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Not set');
+      console.log('Supabase Anon Key:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Not set');
+
       console.log('Attempting to sign in with Supabase...');
       // First try to sign in with Supabase
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -28,7 +32,11 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
         password,
       });
       
-      console.log('Sign in response:', { signInData, signInError });
+      console.log('Sign in response:', { 
+        user: signInData?.user ? 'User exists' : 'No user',
+        session: signInData?.session ? 'Session exists' : 'No session',
+        error: signInError?.message || 'No error'
+      });
       
       if (signInError) {
         console.error('Sign in error:', signInError);
@@ -37,7 +45,11 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
 
       // Get the session token
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('Session:', session);
+      console.log('Session:', {
+        exists: !!session,
+        accessToken: session?.access_token ? 'Token exists' : 'No token',
+        user: session?.user ? 'User exists' : 'No user'
+      });
 
       if (!session) {
         console.error('No session found after sign in');
@@ -55,7 +67,6 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
       const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl : `${supabaseUrl}/`;
       const adminAuthUrl = `${baseUrl}functions/v1/admin-auth`;
       console.log('Admin auth URL:', adminAuthUrl);
-      console.log('Using access token:', session.access_token);
       
       // Make the request to verify admin role
       const response = await fetch(adminAuthUrl, {
