@@ -31,7 +31,8 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
       console.log('Sign in response:', { signInData, signInError });
       
       if (signInError) {
-        throw new Error('Invalid credentials');
+        console.error('Sign in error:', signInError);
+        throw new Error(signInError.message || 'Invalid credentials');
       }
 
       // Get the session token
@@ -39,36 +40,40 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
       console.log('Session:', session);
 
       if (!session) {
+        console.error('No session found after sign in');
         throw new Error('No session found');
       }
 
       // Then verify admin role
       console.log('Verifying admin role...');
-      const response = await fetch('https://bgrpkdtlnlxifdlqrcay.supabase.co/functions/v1/admin-auth', {
+      const adminAuthUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-auth`;
+      console.log('Admin auth URL:', adminAuthUrl);
+      
+      const response = await fetch(adminAuthUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
-        },
+        }
       });
 
       console.log('Admin auth response status:', response.status);
-      const data = await response.json();
-      console.log('Admin auth response data:', data);
+      const responseData = await response.json();
+      console.log('Admin auth response:', responseData);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Not authorized as admin');
+        throw new Error(responseData.error || 'Failed to verify admin role');
       }
 
-      // Set admin flag in localStorage
+      // Store admin flag in localStorage
       localStorage.setItem('buti_admin', 'true');
       
-      toast.success('התחברת בהצלחה כמנהל');
+      toast.success('התחברת בהצלחה כמנהל!');
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Admin login error:', error);
-      toast.error('שם משתמש או סיסמה שגויים');
+      console.error('Login error:', error);
+      toast.error(error instanceof Error ? error.message : 'שגיאה בהתחברות');
     } finally {
       setIsLoading(false);
     }
@@ -76,36 +81,35 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>התחברות כמנהל</DialogTitle>
+          <DialogTitle>התחברות מנהל</DialogTitle>
           <DialogDescription>
-            הזן את פרטי ההתחברות שלך כמנהל המערכת
+            הזן את פרטי ההתחברות שלך כמנהל
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleLogin}>
-          <div className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
             <Input
               type="email"
-              placeholder="הזן אימייל"
+              placeholder="אימייל"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              dir="ltr"
             />
+          </div>
+          <div className="space-y-2">
             <Input
               type="password"
-              placeholder="הזן סיסמה"
+              placeholder="סיסמה"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              dir="ltr"
-              autoComplete="current-password"
             />
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'מתחבר...' : 'התחבר'}
-            </Button>
           </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'מתחבר...' : 'התחבר'}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
