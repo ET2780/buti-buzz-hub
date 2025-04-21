@@ -5,22 +5,10 @@ import { User, PinnedMessage } from '@/types';
 import { useChat } from '@/hooks/useChat';
 import { usePinnedMessage } from '@/hooks/usePinnedMessage';
 import { PerksService } from '@/services/PerksService';
-import { createClient } from '@supabase/supabase-js';
+import { adminClient } from '@/integrations/supabase/client';
 import ChatContainer from '@/components/ChatContainer';
 import ModalManager from '@/components/ModalManager';
 import { Button } from '@/components/ui/button';
-
-// Create service role client
-const adminClient = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
 
 export function ChatPage() {
   const { user } = useAuth();

@@ -1,20 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { adminClient } from '@/integrations/supabase/client';
 import { Perk } from '@/types';
 
 // Table name for perks
 const PERKS_TABLE = 'perks';
-
-// Create service role client
-const adminClient = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
 
 export const PerksService = {
   async getPerks(): Promise<Perk[]> {
