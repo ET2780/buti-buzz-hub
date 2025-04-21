@@ -51,8 +51,11 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
         throw new Error('Supabase URL is not configured');
       }
       
-      const adminAuthUrl = `${supabaseUrl}/functions/v1/admin-auth`;
+      // Ensure the URL ends with a slash
+      const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl : `${supabaseUrl}/`;
+      const adminAuthUrl = `${baseUrl}functions/v1/admin-auth`;
       console.log('Admin auth URL:', adminAuthUrl);
+      console.log('Using access token:', session.access_token);
       
       const response = await fetch(adminAuthUrl, {
         method: 'POST',
@@ -64,6 +67,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
       });
 
       console.log('Admin auth response status:', response.status);
+      console.log('Admin auth response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         const errorText = await response.text();
