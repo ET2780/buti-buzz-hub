@@ -1,10 +1,10 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabaseUrl: string = Deno.env.get('SUPABASE_URL')!
+const supabaseKey: string = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey)
 
-export default async function handler(req: Request) {
+export default async function handler(req: Request): Promise<Response> {
   try {
     const { data, error } = await supabase.rpc('cleanup_old_data')
     

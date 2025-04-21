@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -11,33 +11,38 @@ interface AdminLoginModalProps {
   onSuccess: () => void;
 }
 
-const ADMIN_CREDENTIALS = {
-  username: 'Butistaff',
-  password: 'buti09*&'
-};
-
 export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalProps) {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { signIn } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Call the secure admin auth Edge Function
+      const response = await fetch('https://bgrpkdtlnlxifdlqrcay.supabase.co/functions/v1/admin-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-        // Set admin status in localStorage
-        localStorage.setItem('buti_admin', 'true');
-        toast.success('התחברת בהצלחה כמנהל');
-        onSuccess();
-        onClose();
-      } else {
-        throw new Error('Invalid credentials');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Authentication failed');
       }
+
+      // If successful, sign in the user
+      await signIn(email, password);
+      
+      toast.success('התחברת בהצלחה כמנהל');
+      onSuccess();
+      onClose();
     } catch (error) {
       console.error('Admin login error:', error);
       toast.error('שם משתמש או סיסמה שגויים');
@@ -48,36 +53,44 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle className="text-right" dir="rtl">כניסת מנהל</DialogTitle>
+          <DialogTitle>התחברות מנהל</DialogTitle>
+          <DialogDescription>
+            הזן את פרטי ההתחברות שלך כמנהל
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleLogin} className="space-y-4" dir="rtl">
-          <div className="space-y-2">
-            <Label htmlFor="username">שם משתמש</Label>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">אימייל</label>
             <Input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="הזן אימייל"
               required
-              placeholder="הזן שם משתמש"
+              dir="ltr"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">סיסמה</Label>
+          <div>
+            <label className="block text-sm font-medium mb-1">סיסמה</label>
             <Input
-              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
               placeholder="הזן סיסמה"
+              required
+              dir="ltr"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'מתחבר...' : 'התחבר'}
-          </Button>
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={isLoading || !email || !password}
+            >
+              {isLoading ? 'מתחבר...' : 'התחבר'}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

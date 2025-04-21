@@ -52,6 +52,45 @@ export const useRealtimeMessages = (
           console.log('New message received:', payload);
           
           try {
+            // For automated messages, use the sender metadata directly
+            if (payload.new.is_automated) {
+              const senderMetadata = payload.new.sender_metadata;
+              const newMessage: Message = {
+                id: payload.new.id,
+                text: payload.new.text,
+                timestamp: new Date(payload.new.created_at),
+                isCurrentUser: payload.new.sender_id === user.id,
+                isAutomated: true,
+                sender: {
+                  id: payload.new.sender_id,
+                  name: senderMetadata.name || 'Admin',
+                  avatar: senderMetadata.avatar || '/buti-logo.png',
+                  isAdmin: true,
+                  tags: ['admin'],
+                  customStatus: '',
+                  user_metadata: {
+                    name: senderMetadata.name || 'Admin',
+                    avatar: senderMetadata.avatar || '/buti-logo.png',
+                    tags: ['admin'],
+                    customStatus: '',
+                    permissions: {
+                      isAdmin: true
+                    }
+                  }
+                }
+              };
+
+              console.log('Adding automated message to state:', newMessage);
+              setMessages(prev => {
+                console.log('Previous messages:', prev);
+                const updated = [...prev, newMessage];
+                console.log('Updated messages:', updated);
+                return updated;
+              });
+              return;
+            }
+
+            // For regular messages, fetch the profile as before
             const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('*')

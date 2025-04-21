@@ -165,7 +165,17 @@ export const SongRequestService = {
           {
             sender_id: adminId,
             text: `\u200F🎵 "${songRequest.song_name}" - ${songRequest.profiles.name} ביקש את השיר הזה!`,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            is_automated: true,
+            sender_metadata: {
+              name: 'Buti Staff',
+              avatar: '/buti-logo.png',
+              tags: ['admin'],
+              customStatus: 'צוות BUTI',
+              permissions: {
+                isAdmin: true
+              }
+            }
           }
         ]);
 
