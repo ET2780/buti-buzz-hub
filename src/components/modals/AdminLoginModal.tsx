@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -15,7 +15,6 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +23,11 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
     try {
       console.log('Attempting to sign in with Supabase...');
       // First try to sign in with Supabase
-      const { data: signInData, error: signInError } = await signIn(email, password);
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
       console.log('Sign in response:', { signInData, signInError });
       
       if (signInError) {
@@ -32,11 +35,11 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
       }
 
       // Get the session token
-      const sessionToken = localStorage.getItem('sb-bgrpkdtlnlxifdlqrcay-auth-token');
-      console.log('Session token:', sessionToken);
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Session:', session);
 
-      if (!sessionToken) {
-        throw new Error('No session token found');
+      if (!session) {
+        throw new Error('No session found');
       }
 
       // Then verify admin role
@@ -45,7 +48,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionToken}`
+          'Authorization': `Bearer ${session.access_token}`
         },
       });
 
@@ -56,6 +59,9 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
       if (!response.ok) {
         throw new Error(data.error || 'Not authorized as admin');
       }
+
+      // Set admin flag in localStorage
+      localStorage.setItem('buti_admin', 'true');
       
       toast.success('התחברת בהצלחה כמנהל');
       onSuccess();
