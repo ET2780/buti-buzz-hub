@@ -6,35 +6,56 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 export default async function handler(req: Request) {
   try {
-    const { email, password } = await req.json()
+    console.log('Admin auth request received');
+    
+    // Get the authorization header
+    const authHeader = req.headers.get('Authorization')
+    console.log('Auth header:', authHeader);
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('Missing or invalid auth header');
+      return new Response(JSON.stringify({ error: 'Missing authorization token' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
 
-    // Verify admin credentials
-    const { data: { user }, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    // Extract the token
+    const token = authHeader.split(' ')[1]
+    console.log('Token extracted');
 
-    if (error) {
-      return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+    // Verify the token and get the user
+    console.log('Verifying token...');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    console.log('Token verification result:', { user, authError });
+
+    if (authError || !user) {
+      console.log('Token verification failed:', authError);
+      return new Response(JSON.stringify({ error: 'Invalid session' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       })
     }
 
     // Check if user is admin
+    console.log('Checking admin role for user:', user.id);
     const { data: role, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .single()
 
+    console.log('Role check result:', { role, roleError });
+
     if (roleError || role?.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Not authorized' }), {
+      console.log('User is not admin');
+      return new Response(JSON.stringify({ error: 'Not authorized as admin' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' }
       })
     }
 
+    console.log('Admin verification successful');
     // Return success with user data
     return new Response(JSON.stringify({ 
       user: {
@@ -47,6 +68,7 @@ export default async function handler(req: Request) {
       headers: { 'Content-Type': 'application/json' }
     })
   } catch (error) {
+    console.error('Admin auth error:', error)
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

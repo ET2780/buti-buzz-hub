@@ -22,23 +22,40 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
     setIsLoading(true);
 
     try {
-      // Call the secure admin auth Edge Function
+      console.log('Attempting to sign in with Supabase...');
+      // First try to sign in with Supabase
+      const { data: signInData, error: signInError } = await signIn(email, password);
+      console.log('Sign in response:', { signInData, signInError });
+      
+      if (signInError) {
+        throw new Error('Invalid credentials');
+      }
+
+      // Get the session token
+      const sessionToken = localStorage.getItem('sb-bgrpkdtlnlxifdlqrcay-auth-token');
+      console.log('Session token:', sessionToken);
+
+      if (!sessionToken) {
+        throw new Error('No session token found');
+      }
+
+      // Then verify admin role
+      console.log('Verifying admin role...');
       const response = await fetch('https://bgrpkdtlnlxifdlqrcay.supabase.co/functions/v1/admin-auth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`
         },
-        body: JSON.stringify({ email, password }),
       });
 
+      console.log('Admin auth response status:', response.status);
       const data = await response.json();
+      console.log('Admin auth response data:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Authentication failed');
+        throw new Error(data.error || 'Not authorized as admin');
       }
-
-      // If successful, sign in the user
-      await signIn(email, password);
       
       toast.success('התחברת בהצלחה כמנהל');
       onSuccess();
@@ -55,39 +72,31 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>התחברות מנהל</DialogTitle>
+          <DialogTitle>התחברות כמנהל</DialogTitle>
           <DialogDescription>
-            הזן את פרטי ההתחברות שלך כמנהל
+            הזן את פרטי ההתחברות שלך כמנהל המערכת
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">אימייל</label>
+        <form onSubmit={handleLogin}>
+          <div className="space-y-4">
             <Input
               type="email"
+              placeholder="הזן אימייל"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="הזן אימייל"
               required
               dir="ltr"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">סיסמה</label>
             <Input
               type="password"
+              placeholder="הזן סיסמה"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="הזן סיסמה"
               required
               dir="ltr"
+              autoComplete="current-password"
             />
-          </div>
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={isLoading || !email || !password}
-            >
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'מתחבר...' : 'התחבר'}
             </Button>
           </div>
