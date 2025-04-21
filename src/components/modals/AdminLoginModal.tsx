@@ -46,7 +46,12 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
 
       // Then verify admin role
       console.log('Verifying admin role...');
-      const adminAuthUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-auth`;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error('Supabase URL is not configured');
+      }
+      
+      const adminAuthUrl = `${supabaseUrl}/functions/v1/admin-auth`;
       console.log('Admin auth URL:', adminAuthUrl);
       
       const response = await fetch(adminAuthUrl, {
@@ -54,16 +59,20 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
-        }
+        },
+        body: JSON.stringify({}) // Add empty body to ensure it's a POST request
       });
 
       console.log('Admin auth response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Admin auth error response:', errorText);
+        throw new Error(`Failed to verify admin role: ${response.status} ${errorText}`);
+      }
+      
       const responseData = await response.json();
       console.log('Admin auth response:', responseData);
-
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to verify admin role');
-      }
 
       // Store admin flag in localStorage
       localStorage.setItem('buti_admin', 'true');
