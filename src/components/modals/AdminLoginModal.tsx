@@ -57,22 +57,28 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
       console.log('Admin auth URL:', adminAuthUrl);
       console.log('Using access token:', session.access_token);
       
-      // First check if the user exists in the user_roles table
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .single();
+      // Make the request to verify admin role
+      const response = await fetch(adminAuthUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+        }
+      });
 
-      console.log('Role check result:', { roleData, roleError });
-
-      if (roleError || !roleData || roleData.role !== 'admin') {
-        throw new Error('Not authorized as admin');
-      }
-
-      // If we get here, the user is an admin
-      console.log('Admin verification successful');
+      console.log('Admin auth response status:', response.status);
+      console.log('Admin auth response headers:', Object.fromEntries(response.headers.entries()));
       
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Admin auth error response:', errorText);
+        throw new Error(`Failed to verify admin role: ${response.status} ${errorText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log('Admin auth response:', responseData);
+
       // Store admin flag in localStorage
       localStorage.setItem('buti_admin', 'true');
       
