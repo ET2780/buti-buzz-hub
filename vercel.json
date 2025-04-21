@@ -11,14 +11,16 @@
   ],
   "routes": [
     {
-      "src": "/assets/(.*)",
+      "src": "/assets/.*\\.mjs$",
       "headers": {
         "Content-Type": "text/javascript"
-      },
-      "continue": true
+      }
     },
     {
-      "src": "/(.*)",
+      "handle": "filesystem"
+    },
+    {
+      "src": "/.*",
       "dest": "/index.html"
     }
   ],
