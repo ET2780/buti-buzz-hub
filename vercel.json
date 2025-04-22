@@ -7,9 +7,17 @@
       "config": {
         "distDir": "dist"
       }
+    },
+    {
+      "src": "supabase/functions/**/*.ts",
+      "use": "@vercel/edge"
     }
   ],
   "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/supabase/functions/$1"
+    },
     {
       "src": "/assets/.*\\.mjs$",
       "headers": {

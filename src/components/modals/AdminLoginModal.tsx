@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -15,92 +16,60 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
+    console.log('Starting admin login process...');
+    
     try {
-      // Log environment variables (without sensitive data)
-      console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Not set');
-      console.log('Supabase Anon Key:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Not set');
-
       console.log('Attempting to sign in with Supabase...');
-      // First try to sign in with Supabase
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: { session }, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      
-      console.log('Sign in response:', { 
-        user: signInData?.user ? 'User exists' : 'No user',
-        session: signInData?.session ? 'Session exists' : 'No session',
-        error: signInError?.message || 'No error'
-      });
-      
+
       if (signInError) {
         console.error('Sign in error:', signInError);
-        throw new Error(signInError.message || 'Invalid credentials');
+        setError(signInError.message);
+        return;
       }
-
-      // Get the session token
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Session:', {
-        exists: !!session,
-        accessToken: session?.access_token ? 'Token exists' : 'No token',
-        user: session?.user ? 'User exists' : 'No user'
-      });
 
       if (!session) {
-        console.error('No session found after sign in');
-        throw new Error('No session found');
+        console.error('No session returned from sign in');
+        setError('Failed to create session');
+        return;
       }
 
-      // Then verify admin role
-      console.log('Verifying admin role...');
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) {
-        throw new Error('Supabase URL is not configured');
-      }
-      
-      // Ensure the URL ends with a slash
-      const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl : `${supabaseUrl}/`;
-      const adminAuthUrl = `${baseUrl}functions/v1/admin-auth`;
-      console.log('Admin auth URL:', adminAuthUrl);
-      
-      // Make the request to verify admin role
-      const response = await fetch(adminAuthUrl, {
+      console.log('Sign in successful, verifying admin role...');
+      const response = await fetch('/supabase/functions/admin-auth', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
           'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
-        }
+        },
+        body: JSON.stringify({})
       });
 
       console.log('Admin auth response status:', response.status);
-      console.log('Admin auth response headers:', Object.fromEntries(response.headers.entries()));
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Admin auth error response:', errorText);
-        throw new Error(`Failed to verify admin role: ${response.status} ${errorText}`);
-      }
-      
-      const responseData = await response.json();
-      console.log('Admin auth response:', responseData);
+      const data = await response.json();
+      console.log('Admin auth response data:', data);
 
-      // Store admin flag in localStorage
-      localStorage.setItem('buti_admin', 'true');
-      
-      toast.success('התחברת בהצלחה כמנהל!');
-      onSuccess();
-      onClose();
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error(error instanceof Error ? error.message : 'שגיאה בהתחברות');
-    } finally {
-      setIsLoading(false);
+      if (!response.ok) {
+        console.error('Admin verification failed:', data.error);
+        setError(data.error || 'Failed to verify admin role');
+        return;
+      }
+
+      console.log('Admin verification successful, storing admin flag...');
+      localStorage.setItem('isAdmin', 'true');
+      console.log('Admin flag stored, navigating to chat...');
+      navigate('/chat');
+    } catch (err) {
+      console.error('Unexpected error during login:', err);
+      setError('An unexpected error occurred');
     }
   };
 

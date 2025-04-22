@@ -1,17 +1,30 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+}
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 serve(async (req: Request) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: corsHeaders
+    })
+  }
+
   // Check for authorization header
   const authHeader = req.headers.get('Authorization')
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
       status: 401,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 
@@ -21,7 +34,7 @@ serve(async (req: Request) => {
     if (!email || !password) {
       return new Response(JSON.stringify({ error: 'Email and password are required' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -31,7 +44,7 @@ serve(async (req: Request) => {
       console.error('Error listing users:', listError)
       return new Response(JSON.stringify({ error: 'Failed to check existing users' }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -48,7 +61,7 @@ serve(async (req: Request) => {
         console.error('Error updating user:', updateError)
         return new Response(JSON.stringify({ error: 'Failed to update user password' }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
       userId = existingUser.id
@@ -67,13 +80,13 @@ serve(async (req: Request) => {
         console.error('Error creating user:', createError)
         return new Response(JSON.stringify({ error: 'Failed to create user' }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
       if (!newUser) {
         return new Response(JSON.stringify({ error: 'Failed to create user: no user returned' }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
       userId = newUser.id
@@ -93,7 +106,7 @@ serve(async (req: Request) => {
       console.error('Error creating profile:', profileError)
       return new Response(JSON.stringify({ error: 'Failed to create user profile' }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -107,7 +120,7 @@ serve(async (req: Request) => {
       console.error('Error deleting existing roles:', deleteError)
       return new Response(JSON.stringify({ error: 'Failed to clear existing roles' }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -124,7 +137,7 @@ serve(async (req: Request) => {
       console.error('Error creating admin role:', roleError)
       return new Response(JSON.stringify({ error: 'Failed to assign admin role' }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -134,16 +147,17 @@ serve(async (req: Request) => {
       user: {
         id: userId,
         email
-      }
+      },
+      access_token: 'your-access-token-here'
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   } catch (error) {
     console.error('Unexpected error:', error)
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 }) 
