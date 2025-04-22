@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -12,12 +12,22 @@ interface AdminLoginModalProps {
 }
 
 export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalProps) {
+  console.log("AdminLoginModal rendering, isOpen:", isOpen);
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
 
+  useEffect(() => {
+    console.log("AdminLoginModal mounted");
+    return () => {
+      console.log("AdminLoginModal unmounted");
+    };
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
+    console.log("Login form submitted");
     e.preventDefault();
     console.log("Starting admin login process...");
     setIsLoading(true);
@@ -72,7 +82,10 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             <Input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                console.log("Email changed:", e.target.value);
+                setEmail(e.target.value);
+              }}
               placeholder="הזן אימייל"
               required
               dir="ltr"
@@ -83,7 +96,10 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             <Input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                console.log("Password changed");
+                setPassword(e.target.value);
+              }}
               placeholder="הזן סיסמה"
               required
               dir="ltr"
@@ -93,6 +109,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             <Button
               type="submit"
               disabled={isLoading || !email || !password}
+              onClick={() => console.log("Login button clicked")}
             >
               {isLoading ? 'מתחבר...' : 'התחבר'}
             </Button>
