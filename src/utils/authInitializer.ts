@@ -1,5 +1,5 @@
-
 import { checkForDemoLogin } from './authUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 export const setupAuthListeners = ({
   setUser,
@@ -11,8 +11,18 @@ export const setupAuthListeners = ({
   // Check for localStorage login
   const initializeAuth = () => {
     try {
+      console.log("Initializing auth...");
+      
+      // Check if Supabase is properly configured
+      if (!supabase) {
+        console.error("Supabase client is not properly initialized");
+        throw new Error("Supabase client is not properly initialized");
+      }
+
       // Check for demo login
       const demoUser = checkForDemoLogin();
+      console.log("Demo user check result:", demoUser ? "Found" : "Not found");
+      
       if (demoUser) {
         setUser(demoUser);
         setIsAdmin(demoUser.isAdmin);
@@ -22,6 +32,9 @@ export const setupAuthListeners = ({
       }
     } catch (error) {
       console.error("Error in initializeAuth:", error);
+      // Don't set loading to false if there's an error
+      // This will keep the loading state and show an error UI
+      throw error;
     } finally {
       setIsLoading(false);
     }
