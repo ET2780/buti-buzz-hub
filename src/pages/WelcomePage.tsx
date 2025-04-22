@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { FaGoogle } from "react-icons/fa";
 import { BiUserCircle } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { generateUsername } from "@/lib/utils";
@@ -14,6 +14,13 @@ export default function WelcomePage() {
   const { createTemporaryUser } = useAuth();
   const navigate = useNavigate();
   const [showAdminLogin, setShowAdminLogin] = useState(false);
+
+  useEffect(() => {
+    console.log("WelcomePage: Component mounted");
+    return () => {
+      console.log("WelcomePage: Component unmounted");
+    };
+  }, []);
 
   const handleQuickAccess = async () => {
     try {
@@ -27,11 +34,17 @@ export default function WelcomePage() {
   };
 
   const handleAdminLoginSuccess = () => {
+    console.log("WelcomePage: Admin login successful");
     navigate('/chat');
   };
 
   const handleMembershipClick = () => {
     toast.info("מועדון החברים יושק בקרוב! 🚀");
+  };
+
+  const handleAdminLoginClick = () => {
+    console.log("WelcomePage: Admin login button clicked");
+    setShowAdminLogin(true);
   };
 
   return (
@@ -113,7 +126,7 @@ export default function WelcomePage() {
         {/* Admin Login Link */}
         <div className="mt-8 text-center" dir="rtl">
           <button
-            onClick={() => setShowAdminLogin(true)}
+            onClick={handleAdminLoginClick}
             className="text-gray-600 hover:text-gray-800 text-sm inline-flex items-center gap-1 transition-colors duration-200 hover:underline"
           >
             כניסת מנהל →
