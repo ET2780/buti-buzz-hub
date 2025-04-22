@@ -7,6 +7,7 @@ import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/context/AuthContext';
 
+console.log("Creating QueryClient...");
 const queryClient = new QueryClient();
 
 function NetworkProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -14,6 +15,7 @@ function NetworkProtectedRoute({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
+    console.log("NetworkProtectedRoute: Checking connection...");
     const checkConnection = () => {
       const connectionData = localStorage.getItem('buti_network_connected');
       if (connectionData) {
@@ -34,32 +36,27 @@ function NetworkProtectedRoute({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">טוען...</div>;
+    return <div>Loading...</div>;
   }
 
   if (!isConnected) {
-    return <Navigate to="/connect" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
 }
 
 function App() {
+  console.log("App component rendering...");
+  
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router>
-          <Toaster position="top-right" />
+          <Toaster position="top-center" />
+          <NetworkCheck />
           <Routes>
-            <Route path="/connect" element={<NetworkCheck />} />
-            <Route
-              path="/"
-              element={
-                <NetworkProtectedRoute>
-                  <WelcomePage />
-                </NetworkProtectedRoute>
-              }
-            />
+            <Route path="/" element={<WelcomePage />} />
             <Route
               path="/chat"
               element={
@@ -68,7 +65,6 @@ function App() {
                 </NetworkProtectedRoute>
               }
             />
-            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </AuthProvider>
