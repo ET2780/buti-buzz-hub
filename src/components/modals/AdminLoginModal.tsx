@@ -35,13 +35,16 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
     try {
       console.log("Calling admin auth function...");
       // Call the secure admin auth Edge Function
-      const response = await fetch('https://bgrpkdtlnlxifdlqrcay.supabase.co/functions/v1/admin-auth', {
+      const response = await fetch('https://bgrpkdtlnlxifdlqrcay.supabase.co/functions/v1/create-admin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({ email, password }),
+        mode: 'cors',
+        credentials: 'omit'
       });
 
       console.log("Admin auth response status:", response.status);
