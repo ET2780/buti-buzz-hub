@@ -6,6 +6,9 @@ import type { Database } from './types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Anon Key present:', !!supabaseAnonKey);
+
 if (!supabaseUrl) {
   throw new Error('Missing VITE_SUPABASE_URL environment variable');
 }
@@ -15,16 +18,35 @@ if (!supabaseAnonKey) {
 }
 
 // Create the Supabase client
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  global: {
+    headers: {
+      'x-application-name': 'buti-buzz-hub'
+    }
+  }
+});
 
 // Create admin client (only for server-side operations)
+const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+console.log('Service Role Key present:', !!serviceRoleKey);
+
 export const adminClient = createClient<Database>(
   supabaseUrl,
-  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey,
+  serviceRoleKey || supabaseAnonKey,
   {
     auth: {
       autoRefreshToken: false,
       persistSession: false
+    },
+    global: {
+      headers: {
+        'x-application-name': 'buti-buzz-hub-admin'
+      }
     }
   }
 );
