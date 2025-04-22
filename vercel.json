@@ -19,6 +19,10 @@
       "dest": "/supabase/functions/$1"
     },
     {
+      "src": "/supabase/functions/(.*)",
+      "dest": "/supabase/functions/$1"
+    },
+    {
       "src": "/assets/.*\\.mjs$",
       "headers": {
         "Content-Type": "text/javascript"
