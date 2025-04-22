@@ -34,9 +34,11 @@ export function useAuth() {
 
   useEffect(() => {
     const initializeAuth = async () => {
+      console.log("Initializing auth in useAuth hook...");
       // First check if there's a temporary user
       const tempUserId = localStorage.getItem('temp_user_id');
       if (tempUserId) {
+        console.log("Found temporary user ID:", tempUserId);
         // Get the temporary user's profile
         const { data: profile, error } = await supabase
           .from('profiles')
@@ -45,14 +47,14 @@ export function useAuth() {
           .single();
 
         if (profile && !error) {
+          console.log("Found temporary user profile:", profile);
           setUser({
             id: tempUserId,
             user_metadata: {
               isTemporary: true,
-              isAdmin: false,
               name: profile.name,
               avatar: profile.avatar,
-              tags: profile.tags,
+              tags: profile.tags || [],
               customStatus: profile.custom_status,
               permissions: {
                 canManagePerks: false,
@@ -61,76 +63,38 @@ export function useAuth() {
                 canManageUsers: false,
                 canEditProfile: true,
                 canWriteMessages: true,
-                canSuggestSongs: true
-              }
-            }
+                canSuggestSongs: true,
+              },
+            },
           } as ExtendedUser);
-          setLoading(false);
-          return;
         }
       }
-
-      // Then check for admin status
-      const isAdmin = localStorage.getItem('buti_admin') === 'true';
-      if (isAdmin) {
-        // Generate a UUID for admin user
-        const adminId = crypto.randomUUID();
-        
-        // Create admin profile in the database
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: adminId,
-            name: 'Buti Staff',
-            avatar: '/buti-logo.png',
-            tags: ['admin'],
-            custom_status: 'צוות BUTI'
-          });
-
-        if (profileError) {
-          console.error('Error creating admin profile:', profileError);
-        }
-
-        setUser({
-          id: adminId,
-          user_metadata: {
-            isTemporary: false,
-            isAdmin: true,
-            name: 'Buti Staff',
-            avatar: '/buti-logo.png',
-            permissions: {
-              canManagePerks: true,
-              canManageSongs: true,
-              canManagePinnedMessages: true,
-              canManageUsers: true,
-              canEditProfile: true,
-              canWriteMessages: true,
-              canSuggestSongs: true
-            }
-          }
-        } as ExtendedUser);
-        setLoading(false);
-        return;
-      }
-
-      // Finally, check for regular auth session
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        handleUser(session?.user || null);
-        setLoading(false);
-      });
-
-      // Listen for auth changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        handleUser(session?.user || null);
-      });
-
-      return () => {
-        subscription.unsubscribe();
-      };
+      setLoading(false);
     };
 
     initializeAuth();
   }, []);
+
+  const signIn = async (email: string, password: string) => {
+    console.log("Signing in user with email:", email);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error("Sign in error:", error);
+        throw error;
+      }
+
+      console.log("Sign in successful, user data:", data);
+      setUser(data.user as ExtendedUser);
+    } catch (error) {
+      console.error("Sign in failed:", error);
+      throw error;
+    }
+  };
 
   const generateAmusingName = () => {
     const prefixes = ['מצחיק', 'חמוד', 'מתוק', 'מקסים', 'נחמד', 'מצוין', 'מדהים', 'מעולה'];
